@@ -10,5 +10,5 @@ import com.server.api.model.User;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findByName(String name);
-    List<User> findByEmployeeId(String employeeId);
+    List<User> findByEmployeeId(Integer employeeId);
 }

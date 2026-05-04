@@ -43,5 +43,15 @@ public class UserService {
         }
     }
 
-    
+    public User getUserByEmployeeID(Integer id){
+        var user = userRepository.findByEmployeeId(id);
+
+        if (user.isEmpty()){
+            throw new RuntimeException("Usuario não encontrado");            
+        } else {
+            return user.get(0);
+        }
+    }
+
+
 }
