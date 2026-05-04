@@ -30,11 +30,6 @@ public class User {
     private String password;
 
     // Builders
-
-    public User() {
-        id = UUID.randomUUID();
-    }
-
     public User(String name, Integer employeeID, String role, String sector, String password) {
         this.name = name;
         this.employeeId = employeeID;
