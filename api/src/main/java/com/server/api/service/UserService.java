@@ -1,7 +1,7 @@
 package com.server.api.service;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
-
 import com.server.api.model.User;
 import com.server.api.repository.UserRepository;
 
@@ -28,4 +28,20 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
+    public List<User> getAllUsers(){
+        return userRepository.findAll();
+    }
+
+    public User getUserByName(String name){
+        var user = userRepository.findByName(name);
+
+        if(user.isEmpty()){
+            throw new RuntimeException("Usuario não encontrado");
+        } else {
+            return user.get(0);
+        }
+    }
+
+    
 }
