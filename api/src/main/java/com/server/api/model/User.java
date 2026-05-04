@@ -36,7 +36,6 @@ public class User {
     }
 
     public User(String name, Integer employeeID, String role, String sector, String password) {
-        id = UUID.randomUUID();
         this.name = name;
         this.employeeId = employeeID;
         this.role = role;
