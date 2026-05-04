@@ -23,4 +23,6 @@ public class UserController {
     public List<User> getAllUsers(){
         return userService.getAllUsers();
     }
+
+    // Use a DTO to transfer only the necessary data to the client, instead of sending the entire User object
 }
