@@ -42,12 +42,14 @@ public class Tools{
     // Builders
     public Tools() {}
 
-    public Tools(String name, String description, int quantity, String type, String levelSecurity){
+    public Tools(String name, String description, int quantity, String type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
         this.name = name;
         this.description = description;
         this.quantity = quantity;
         this.type = type;
         this.levelSecurity = levelSecurity;
+        this.dateCreation = dateCreation;
+        this.dateUpdate = dateUpdate;
     }
 
     // Getters e Setters
