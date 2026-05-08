@@ -42,12 +42,15 @@ public class Tools{
     // Builders
     public Tools() {}
     
-    public Tools(String name, String description, int quantity, String type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
+    public Tools(UUID id, String name, String description, int quantity, String type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
+        this.id = id;
         this.name = name;
         this.description = description;
         this.quantity = quantity;
         this.type = type;
         this.levelSecurity = levelSecurity;
+        this.dateCreation = dateCreation;
+        this.dateUpdate = dateUpdate;
     }
 
     // Getters e Setters
@@ -98,5 +101,21 @@ public class Tools{
 
     public void setLevelSecurity(String levelSecurity){
         this.levelSecurity = levelSecurity;
+    }
+
+    public Instant getDateCreation(){
+        return dateCreation;
+    }
+
+    public void setDateCreation(Instant dateCreation){
+        this.dateCreation = dateCreation;
+    }
+
+    public Instant getDateUpdate(){
+        return dateUpdate;
+    }
+
+    public void setDateUpdate(Instant dateUpdate){
+        this.dateUpdate = dateUpdate;
     }
 }
