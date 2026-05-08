@@ -25,7 +25,7 @@ public class Tools{
     private String description;
 
     @Column(name="quantity", nullable = false)
-    private int quantity = 0;
+    private int quantity;
 
     @Column(name="type", nullable = false)
     private String type;
@@ -72,6 +72,10 @@ public class Tools{
 
     public String getDescription(){
         return description;
+    }
+
+    public void setDescription(String description){
+        this.description = description;
     }
 
     public int getQuantity(){
