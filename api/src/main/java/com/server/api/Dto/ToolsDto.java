@@ -14,9 +14,7 @@ public class ToolsDto {
     private Instant dateUpdate;
 
     // Builders
-    public ToolsDto(){
-
-    }
+    public ToolsDto(){}
     
     public ToolsDto(UUID id, String name, String description, int quantity, String type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
         this.id = id;
@@ -46,7 +44,7 @@ public class ToolsDto {
         this.name = name;
     }
 
-    public String getDescriptin(){
+    public String getDescription(){
         return description;
     }
 
