@@ -13,57 +13,55 @@ import com.server.api.repository.UserRepository;
 @Service
 public class UserService {
     private final UserRepository userRepository;
-private final BCryptPasswordEncoder encoder;
+    private final BCryptPasswordEncoder encoder;
 
     public UserService(UserRepository userRepository, BCryptPasswordEncoder encoder) {
         this.userRepository = userRepository;
         this.encoder = encoder;
     }
 
-public UserResponse createUser(UserRequest request) {
-    String hash = encoder.encode(request.password());
-
-    var user = new User(
-        request.name(),
-        request.role(),
-        request.sector(),
-        hash
-    );
-
-    userRepository.save(user);
-
-    return new UserResponse(
-        user.getId(),
-        user.getName(),
-        user.getEmployeeId(),
-        user.getRole(),
-        user.getSector()
-    );
-}
-
-    public List<User> getAllUsers(){
-        return userRepository.findAll();
+    private UserResponse toResponse(User user) {
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmployeeId(),
+                user.getRole(),
+                user.getSector());
     }
 
-    public User getUserByName(String name){
-        var user = userRepository.findByName(name);
+    public UserResponse createUser(UserRequest request) {
+        String hash = encoder.encode(request.password());
 
-        if(user.isEmpty()){
-            throw new RuntimeException("Usuario não encontrado");
-        } else {
-            return user.get(0);
-        }
+        var user = new User(
+                request.name(),
+                request.role(),
+                request.sector(),
+                hash);
+
+        userRepository.save(user);
+
+        return toResponse(user);
     }
 
-    public User getUserByEmployeeID(Integer id){
-        var user = userRepository.findByEmployeeId(id);
-
-        if (user.isEmpty()){
-            throw new RuntimeException("Usuario não encontrado");            
-        } else {
-            return user.get(0);
-        }
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
+    public UserResponse getUserByName(String name) {
+        return userRepository.findByName(name)
+                .stream()
+                .findFirst()
+                .map(this::toResponse)
+                .orElseThrow(() -> new RuntimeException("Usuario não encontrado"));
+    }
+
+    public UserResponse getUserByEmployeeID(Integer id) {
+        return userRepository.findByEmployeeId(id)
+                .map(this::toResponse)
+                .orElseThrow(() -> new RuntimeException("Usuario não encontrado"));
+    }
 
 }
