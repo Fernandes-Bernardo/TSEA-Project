@@ -8,7 +8,7 @@ public record UserRequest(
     @NotBlank
     String name,
 
-    @NotBlank
+    @NotNull
     Role role,
 
     @NotBlank

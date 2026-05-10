@@ -33,6 +33,15 @@ public class JwtFilter extends OncePerRequestFilter {
         FilterChain filterChain
     ) throws ServletException, IOException {
 
+        String path = request.getServletPath();
+
+        if (path.startsWith("/api/auth") ||
+            path.startsWith("/swagger") ||
+            path.startsWith("/v3/api-docs")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -40,7 +49,10 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.substring(7);
+        String token = authHeader.substring(7).trim();
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7).trim();
+        }
 
         if (!jwtService.isTokenValid(token)) {
             filterChain.doFilter(request, response);
@@ -53,15 +65,10 @@ public class JwtFilter extends OncePerRequestFilter {
         var authorities = List.of(new SimpleGrantedAuthority(role));
 
         var authentication = new UsernamePasswordAuthenticationToken(
-            employeeId,
-            null,
-            authorities
+            employeeId, null, authorities
         );
 
-        authentication.setDetails(
-            new WebAuthenticationDetailsSource().buildDetails(request)
-        );
-
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         filterChain.doFilter(request, response);

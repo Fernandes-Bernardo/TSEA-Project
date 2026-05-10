@@ -3,6 +3,7 @@ package com.server.api.controller;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.server.api.dto.user.UserRequest;
 import com.server.api.dto.user.UserResponse;
@@ -35,6 +36,7 @@ public class UserController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> createUser(@RequestBody @Valid UserRequest request) {
         var user = userService.createUser(request);
 
