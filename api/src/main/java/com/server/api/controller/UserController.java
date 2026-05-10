@@ -2,14 +2,12 @@ package com.server.api.controller;
 
 import java.net.URI;
 import java.util.List;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import com.server.api.dto.user.UserRequest;
 import com.server.api.dto.user.UserResponse;
+import com.server.api.service.AuthService;
 import com.server.api.service.UserService;
-
 import jakarta.validation.Valid;
 
 @RestController
@@ -18,7 +16,7 @@ public class UserController {
 
     private final UserService userService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, AuthService authService) {
         this.userService = userService;
     }
 
