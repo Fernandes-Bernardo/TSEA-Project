@@ -1,5 +1,6 @@
 package com.server.api.model;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -10,9 +11,13 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-public class Tools{
+@Getter @Setter @NoArgsConstructor
+public class Tools implements Serializable{
     @Id
     @GeneratedValue
     @UuidGenerator
@@ -40,7 +45,6 @@ public class Tools{
     private Instant dateUpdate;
 
     // Builders
-    public Tools() {}
     
     public Tools(UUID id, String name, String description, int quantity, String type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
         this.id = id;
@@ -50,72 +54,6 @@ public class Tools{
         this.type = type;
         this.levelSecurity = levelSecurity;
         this.dateCreation = dateCreation;
-        this.dateUpdate = dateUpdate;
-    }
-
-    // Getters e Setters
-
-    public UUID getId(){
-        return id;
-    }
-
-    public void setId(UUID id){
-        this.id = id;
-    }
-
-    public String getName(){
-        return name;
-    }
-
-    public void setName(String name){
-        this.name = name;
-    }
-
-    public String getDescription(){
-        return description;
-    }
-
-    public void setDescription(String description){
-        this.description = description;
-    }
-
-    public int getQuantity(){
-        return quantity;
-    }
-
-    public void setQuantity(int quantity){
-        this.quantity = quantity;
-    }
-
-    public String getType(){
-        return type;
-    }
-
-    public void setType(String type){
-        this.type = type;
-    }
-
-    public String getLevelSecurity(){
-        return levelSecurity;
-    }
-
-    public void setLevelSecurity(String levelSecurity){
-        this.levelSecurity = levelSecurity;
-    }
-
-    public Instant getDateCreation(){
-        return dateCreation;
-    }
-
-    public void setDateCreation(Instant dateCreation){
-        this.dateCreation = dateCreation;
-    }
-
-    public Instant getDateUpdate(){
-        return dateUpdate;
-    }
-
-    public void setDateUpdate(Instant dateUpdate){
         this.dateUpdate = dateUpdate;
     }
 }
