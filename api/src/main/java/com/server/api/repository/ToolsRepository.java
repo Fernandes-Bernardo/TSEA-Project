@@ -13,5 +13,5 @@ public interface ToolsRepository extends JpaRepository<Tools, UUID>{
 
     List<Tools> findByName(String name);
     List<Tools> findById(int id);
-    List<Tools> findByNameContaing(String name);
+    List<Tools> findByNameContaining(String name);
 }

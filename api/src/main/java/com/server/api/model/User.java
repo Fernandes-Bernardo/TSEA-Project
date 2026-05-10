@@ -1,14 +1,21 @@
 package com.server.api.model;
 
+import java.io.Serializable;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-public class User {
+@Table(name = "users")  
+@Getter @Setter @NoArgsConstructor
+public class User implements Serializable{
     @Id
     @GeneratedValue
     @UuidGenerator
@@ -30,61 +37,11 @@ public class User {
     private String password;
 
     // Builders
-    public User(String name, Integer employeeID, String role, String sector, String password) {
+    public User(String name, String role, String sector, String password) {
         this.name = name;
-        this.employeeId = employeeID;
+        this.employeeId = (int) (Math.random() * 100000);
         this.role = role;
         this.sector = sector;
         this.password = password;
     }
-
-    // Getters and Setters
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Integer getEmployeeId() {
-        return employeeId;
-    }
-
-    public void setEmployeeId(Integer employeeId) {
-        this.employeeId = employeeId;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
-    public String getSector() {
-        return sector;
-    }
-
-    public void setSector(String sector) {
-        this.sector = sector;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }    
 }
