@@ -7,8 +7,8 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import com.server.api.Dto.ToolsDto;
-import com.server.api.Dto.UpdateToolDto;
+import com.server.api.dto.ToolsDto;
+import com.server.api.dto.UpdateToolDto;
 import com.server.api.model.Tools;
 import com.server.api.repository.ToolsRepository;
 

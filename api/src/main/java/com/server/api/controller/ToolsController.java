@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.server.api.Dto.ToolsDto;
-import com.server.api.Dto.UpdateToolDto;
+import com.server.api.dto.ToolsDto;
+import com.server.api.dto.UpdateToolDto;
 import com.server.api.model.Tools;
 import com.server.api.service.ToolsService;
 
