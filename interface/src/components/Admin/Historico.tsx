@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 interface Registro {
   id: number;
   usuario: string;
@@ -9,18 +11,35 @@ interface Registro {
 }
 
 function Historico() {
+  const [filtro, setFiltro] = useState("");
+
+
   const historico: Registro[] = [
     { id: 1, usuario: "Gabriel Soares", ferramenta: "Lâmina de serra", dataRetirada: "10/05/2026", horaRetirada: "08:30", dataDevolucao: "10/05/2026", horaDevolucao: "17:15" },
     { id: 2, usuario: "Emily Silva", ferramenta: "Cortador de piso", dataRetirada: "09/05/2026", horaRetirada: "09:00", dataDevolucao: null, horaDevolucao: null },
     { id: 3, usuario: "Carlos Mendes", ferramenta: "Furadeira", dataRetirada: "08/05/2026", horaRetirada: "10:15", dataDevolucao: "08/05/2026", horaDevolucao: "16:00" },
     { id: 4, usuario: "Ana Paula", ferramenta: "Serra circular", dataRetirada: "07/05/2026", horaRetirada: "14:00", dataDevolucao: "09/05/2026", horaDevolucao: "11:30" },
   ];
+  
 
   return (
+    
     <div className="min-h-screen p-6" style={{ backgroundColor: "#BEBEBE" }}>
       <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
-        <h2 className="text-2xl font-bold text-primary">Histórico de Retiradas</h2>
-        
+           {/* Filtro com lupa */}
+        <div className="flex items-center gap-2 bg-[#D9D9D9] rounded-full p-2 px-4 shadow-md">
+          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span className="text-gray-700">Filtrar...</span>
+          <input
+            type="text"
+            placeholder=""
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+            className="flex-1 p-2 rounded-full bg-transparent focus:outline-none"
+          />
+        </div>
         <div className="bg-[#D9D9D9] rounded-lg border-2 border-primary overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-primary text-white">
@@ -34,14 +53,14 @@ function Historico() {
             </thead>
             <tbody>
               {historico.map((item) => (
-                <tr key={item.id} className="border-b border-gray-300 hover:bg-gray-200">
-                  <td className="p-3 font-medium">{item.usuario}</td>
-                  <td className="p-3">{item.ferramenta}</td>
-                  <td className="p-3">{item.dataRetirada} {item.horaRetirada}</td>
-                  <td className="p-3">{item.dataDevolucao ? `${item.dataDevolucao} ${item.horaDevolucao}` : "-"}</td>
+                <tr key={item.id} className="border-b border-gray-300">
+                  <td className="p-3 font-medium border-r border-highlight">{item.usuario}</td>
+                  <td className="p-3 border-r border-highlight">{item.ferramenta}</td>
+                  <td className="p-3 border-r border-highlight">{item.dataRetirada} {item.horaRetirada}</td>
+                  <td className="p-3 border-r border-highlight">{item.dataDevolucao ? `${item.dataDevolucao} ${item.horaDevolucao}` : "-"}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      item.dataDevolucao ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800"
+                    <span className={`font-semibold ${
+                      item.dataDevolucao ? "text-green-600" : "text-red-600"
                     }`}>
                       {item.dataDevolucao ? "Devolvido" : "Pendente"}
                     </span>

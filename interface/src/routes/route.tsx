@@ -1,10 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
 import Home from "../pages/home";
 import Admin from "../pages/admin";
-import FerramentasPendentes from "../components/Admin/pendingTasks";
-import Historico from "../components/Admin/history";
-import MonitoramentoSensor from "../components/Admin/sensor";
-import CrudFerramentas from "../components/Admin/crud";
+import FerramentasPendentes from "../components/Admin/FerramentasPendentes";
+import Historico from "../components/Admin/Historico";
+import MonitoramentoSensor from "../components/Admin/MonitoramentoSensor";
 
 const router = createBrowserRouter([
   {
@@ -16,20 +15,19 @@ const router = createBrowserRouter([
     element: <Admin />,
     children: [
       {
-        path: "ferramentas-pendentes",
+        index: true,  // ← Isso faz /admin mostrar algo
         element: <FerramentasPendentes />,
       },
       {
-        path: "historico",
+        path: "ferramentas-pendentes",
+        element: <FerramentasPendentes />,
+      },
+      { path: "historico",
         element: <Historico />,
       },
       {
-        path: "monitoramento",
+        path: "sensor",
         element: <MonitoramentoSensor />,
-      },
-      {
-        path: "crud",
-        element: <CrudFerramentas />,
       },
     ],
   },
