@@ -1,10 +1,13 @@
 package com.server.api.model;
 
 import java.io.Serializable;
+import java.util.Random;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -27,8 +30,9 @@ public class User implements Serializable{
     @Column(name = "employeeId", nullable = false, unique = true)
     private Integer employeeId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
-    private String role;
+    private Role role;
 
     @Column(name = "sector", nullable = false)
     private String sector;
@@ -37,11 +41,12 @@ public class User implements Serializable{
     private String password;
 
     // Builders
-    public User(String name, String role, String sector, String password) {
+    public User(String name, Role role, String sector, String password) {
         this.name = name;
-        this.employeeId = (int) (Math.random() * 100000);
+        this.employeeId = /*(int) (Math.random() * 100000)*/ new Random().nextInt(1_000_000); // TEST
         this.role = role;
         this.sector = sector;
         this.password = password;
     }
+
 }
