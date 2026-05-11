@@ -36,7 +36,7 @@ public class Tools implements Serializable{
 
     @Column(name="type", nullable = false)
     @Enumerated(EnumType.STRING)
-    private Type type;
+    private TypeTool type;
 
     @Column(name="levelSecurity", nullable = false)
     private String levelSecurity;
@@ -47,14 +47,14 @@ public class Tools implements Serializable{
     @UpdateTimestamp
     private Instant dateUpdate;
 
-    public enum Type{ // Definição para usar enum no atributo
+    public enum TypeTool{ // Definição para usar enum no atributo
         Consumivel,
         Uso_Diário
     }
 
     // Builders
     
-    public Tools(UUID id, String name, String description, int quantity, Type type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
+    public Tools(UUID id, String name, String description, int quantity, TypeTool type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
         this.id = id;
         this.name = name;
         this.description = description;
