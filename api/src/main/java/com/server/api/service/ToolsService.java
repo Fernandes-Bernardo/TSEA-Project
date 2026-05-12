@@ -1,12 +1,9 @@
 package com.server.api.service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.stereotype.Service;
-
 import com.server.api.dto.ToolsDto;
 import com.server.api.dto.UpdateToolDto;
 import com.server.api.model.Tools;
@@ -20,23 +17,20 @@ public class ToolsService {
         this.toolsRepository = toolsRepository;
     }
 
-    public UUID createTools(ToolsDto toolDto){
+    public Tools createTools(ToolsDto toolDto){
         // Dto convert to Model
 
         var tool = new Tools(
-            UUID.randomUUID(),
             toolDto.name(),
             toolDto.description(), 
             toolDto.quantity(),
             toolDto.type(), 
-            toolDto.levelSecurity(),
-            Instant.now(),
-            null
+            toolDto.levelSecurity()
         );
 
-        var toolSaved = toolsRepository.save(tool);
+        toolsRepository.save(tool);
 
-        return toolSaved.getId(); // Return id for create tool
+        return tool;
     }
 
 

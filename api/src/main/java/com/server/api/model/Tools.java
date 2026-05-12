@@ -48,20 +48,17 @@ public class Tools implements Serializable{
     private Instant dateUpdate;
 
     public enum TypeTool{ // Definição para usar enum no atributo
-        Consumivel,
-        Uso_Diário
+        CONSUMABLE,
+        DAILY_USE
     }
 
     // Builders
     
-    public Tools(UUID id, String name, String description, int quantity, TypeTool type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
-        this.id = id;
+    public Tools(String name, String description, int quantity, TypeTool type, String levelSecurity){
         this.name = name;
         this.description = description;
         this.quantity = quantity;
         this.type = type;
         this.levelSecurity = levelSecurity;
-        this.dateCreation = dateCreation;
-        this.dateUpdate = dateUpdate;
     }
 }
