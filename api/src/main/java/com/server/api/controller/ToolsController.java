@@ -43,7 +43,7 @@ public class ToolsController{
         return ResponseEntity.notFound().build();
     }
 
-    @GetMapping("name")
+    @GetMapping("/name")
     public ResponseEntity<List<Tools>> getAllTool(String name){
         var tools = toolsService.listTools();
 
