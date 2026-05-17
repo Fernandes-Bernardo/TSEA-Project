@@ -5,12 +5,18 @@ import FerramentasPendentes from "../components/Admin/FerramentasPendentes";
 import Historico from "../components/Admin/Historico";
 import MonitoramentoSensor from "../components/Admin/MonitoramentoSensor";
 import CrudFerramentas from "../components/Admin/CrudFerramentas";
+import Login from "../pages/login";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Home />,
   },
+  {
+    path: "/login",
+    element: <Login />,
+  },
+
   {
     path: "/admin",
     element: <Admin />,

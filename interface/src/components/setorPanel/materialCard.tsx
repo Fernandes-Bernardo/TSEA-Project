@@ -34,7 +34,7 @@ function MaterialCard({ material, mensagemSucesso, botaoAtivo, onRetirar, onDevo
         )}
       </div>
       
-      {/* Botões - lado a lado */}
+   
       <div className="flex gap-3 flex-shrink-0">
         <button 
           onClick={() => onRetirar(material.id)}

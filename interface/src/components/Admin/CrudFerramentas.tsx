@@ -92,7 +92,7 @@ function CrudFerramentas() {
     }
   };
 
-  // Importar planilha (simulação)
+  // Importar planilha 
   const handleImportarPlanilha = () => {
     alert("Funcionalidade de importar planilha será implementada em breve.");
   };

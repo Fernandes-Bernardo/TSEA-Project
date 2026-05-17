@@ -28,7 +28,7 @@ function FerramentasPendentes() {
     <div className="min-h-screen p-6" style={{ backgroundColor: "#BEBEBE" }}>
       <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
         
-        {/* Filtro com lupa (inalterado) */}
+       
         <div className="flex items-center gap-2 bg-[#D9D9D9] rounded-full p-2 px-4 shadow-md">
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -43,7 +43,7 @@ function FerramentasPendentes() {
           />
         </div>
         
-        {/* Tabela com fundo D9D9D9 e borda verde */}
+       
         <div className="bg-[#D9D9D9] rounded-lg border-2 border-primary overflow-hidden shadow-md">
           <table className="w-full text-left">
             <thead className="bg-primary text-white">
