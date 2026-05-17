@@ -9,6 +9,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import lombok.Getter;
@@ -33,7 +35,8 @@ public class Tools implements Serializable{
     private int quantity;
 
     @Column(name="type", nullable = false)
-    private String type;
+    @Enumerated(EnumType.STRING)
+    private TypeTool type;
 
     @Column(name="levelSecurity", nullable = false)
     private String levelSecurity;
@@ -44,16 +47,18 @@ public class Tools implements Serializable{
     @UpdateTimestamp
     private Instant dateUpdate;
 
+    public enum TypeTool{ // Definição para usar enum no atributo
+        CONSUMABLE,
+        DAILY_USE
+    }
+
     // Builders
     
-    public Tools(UUID id, String name, String description, int quantity, String type, String levelSecurity, Instant dateCreation, Instant dateUpdate){
-        this.id = id;
+    public Tools(String name, String description, int quantity, TypeTool type, String levelSecurity){
         this.name = name;
         this.description = description;
         this.quantity = quantity;
         this.type = type;
         this.levelSecurity = levelSecurity;
-        this.dateCreation = dateCreation;
-        this.dateUpdate = dateUpdate;
     }
 }
