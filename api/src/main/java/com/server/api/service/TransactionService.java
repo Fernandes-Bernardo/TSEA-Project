@@ -1,5 +1,6 @@
 package com.server.api.service;
 
+import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import com.server.api.dto.transaction.TransactionRequest;
@@ -38,6 +39,8 @@ public class TransactionService {
                                             tool.getType(),
                                             request.toolQuantity()
                                         );
+
+        transactionRepository.save(transaction);
         return transaction;
     }
 
@@ -50,6 +53,16 @@ public class TransactionService {
 
         return transaction;
     }
+
+    public Transaction getTransactionId(Integer id){
+        var transaction = transactionRepository.findById(id);
+
+        if(transaction.isEmpty()){
+            throw new RuntimeException("Transacao nao encotrada");
+        }
+
+        return transaction.get();
+    }
     
     public void confirmReturn(Integer id){
         var transaction = transactionRepository.findById(id);
@@ -57,6 +70,10 @@ public class TransactionService {
         if(transaction.isEmpty()){
             throw new RuntimeException("Transacao nao encontrada");
         }
+
+        transaction.get().setReturnedDate(Instant.now());
+
+        transactionRepository.save(transaction.get());
 
         transaction.get().setStatus(true);
     }

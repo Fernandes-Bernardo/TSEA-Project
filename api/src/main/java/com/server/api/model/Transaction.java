@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import com.server.api.model.Tools.TypeTool;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -47,7 +46,6 @@ public class Transaction implements Serializable{
     @CreationTimestamp
     private Instant caughtDate;
 
-    @UpdateTimestamp
     private Instant returnedDate;
 
     // Builder
