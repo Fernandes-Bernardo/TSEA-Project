@@ -26,9 +26,9 @@ function FerramentasPendentes() {
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: "#BEBEBE" }}>
-      <div className="flex flex-col gap-6 w-full max-w-4xl mx-auto">
+      <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
         
-        {/* Filtro com lupa */}
+       
         <div className="flex items-center gap-2 bg-[#D9D9D9] rounded-full p-2 px-4 shadow-md">
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -43,34 +43,34 @@ function FerramentasPendentes() {
           />
         </div>
         
-        {/* Card único com fundo D9D9D9 e linhas laranja separando */}
-        <div className="bg-[#D9D9D9] rounded-lg p-6 shadow-md">
-          <div className="flex flex-col">
-            {pendenciasFiltradas.map((pendencia, index) => (
-              <div key={pendencia.id}>
-                {index > 0 && (
-                  <div className="border-t border-highlight my-4"></div>
-                )}
-                <div>
-                  <h3 className="text-lg font-bold text-primary">{pendencia.nome}</h3>
-                  <p className="text-gray-700 mt-1">
-                    <span className="font-bold">Item em uso:</span> {pendencia.item}
-                  </p>
-                  <p className="text-gray-700">
-                    <span className="font-bold">Setor:</span> {pendencia.setor}
-                  </p>
-                  <p className="text-gray-700">
-                    <span className="font-bold">Status:</span>{" "}
-                    {pendencia.status === "em uso" ? (
-                      <span className="text-green-600">Em uso</span>
-                    ) : (
-                      <span className="text-red-600">Não devolvido</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+       
+        <div className="bg-[#D9D9D9] rounded-lg border-2 border-primary overflow-hidden shadow-md">
+          <table className="w-full text-left">
+            <thead className="bg-primary text-white">
+              <tr>
+                <th className="p-3">Usuário</th>
+                <th className="p-3">Item em uso</th>
+                <th className="p-3">Setor</th>
+                <th className="p-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendenciasFiltradas.map((pendencia, idx) => (
+                <tr key={pendencia.id} className={idx !== pendenciasFiltradas.length - 1 ? "border-b border-highlight" : ""}>
+                  <td className="p-3 font-medium border-r border-highlight">{pendencia.nome}</td>
+                  <td className="p-3 border-r border-highlight">{pendencia.item}</td>
+                  <td className="p-3 border-r border-highlight">{pendencia.setor}</td>
+                  <td className="p-3">
+                    <span className={`font-semibold ${
+                      pendencia.status === "em uso" ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {pendencia.status === "em uso" ? "Em uso" : "Não devolvido"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
