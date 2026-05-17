@@ -4,6 +4,7 @@ import Admin from "../pages/admin";
 import FerramentasPendentes from "../components/Admin/FerramentasPendentes";
 import Historico from "../components/Admin/Historico";
 import MonitoramentoSensor from "../components/Admin/MonitoramentoSensor";
+import CrudFerramentas from "../components/Admin/CrudFerramentas";
 
 const router = createBrowserRouter([
   {
@@ -28,6 +29,10 @@ const router = createBrowserRouter([
       {
         path: "sensor",
         element: <MonitoramentoSensor />,
+      },
+      {
+      path: "crud",
+        element: <CrudFerramentas />,
       },
     ],
   },
