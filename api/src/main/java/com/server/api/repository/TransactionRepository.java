@@ -8,5 +8,6 @@ import com.server.api.model.Transaction;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID>{
 
+    Optional<Transaction> findById(Integer id);
     List<Transaction> findByResponsible(String responsible);
 }
