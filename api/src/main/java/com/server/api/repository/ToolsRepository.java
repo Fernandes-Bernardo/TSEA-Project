@@ -9,9 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ToolsRepository extends JpaRepository<Tools, UUID>{
+public interface ToolsRepository extends JpaRepository<Tools, UUID> {
 
     List<Tools> findByName(String name);
-    List<Tools> findById(int id);
-    List<Tools> findByNameContaining(String name);
+    List<Tools> findByNameContainingIgnoreCase(String name);
 }

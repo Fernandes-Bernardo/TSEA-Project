@@ -18,14 +18,14 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("api/transacoes")
 public class TransactionController {
-    private TransactionService transactionService;
+    private final TransactionService transactionService;
 
-    public TransactionController(TransactionService transactionService){
+    public TransactionController(TransactionService transactionService) {
         this.transactionService = transactionService;
     }
 
     @PostMapping
-    public ResponseEntity<Transaction> createTransaction(@RequestBody @Valid TransactionRequest request){
+    public ResponseEntity<Transaction> createTransaction(@RequestBody @Valid TransactionRequest request) {
         var transaction = transactionService.createTransaction(request);
 
         return ResponseEntity
@@ -33,31 +33,33 @@ public class TransactionController {
                 .body(transaction);
     }
 
-    @PutMapping
-    public ResponseEntity<Transaction> confirmeReturn(@RequestBody Integer id){
-        var transaction = transactionService.getTransactionId(id);
-
-        transactionService.confirmReturn(transaction.getId());
-
-
-        return ResponseEntity
-                .created(URI.create("api/transacoes/" + transaction.getId()))
-                .body(transaction);
-        
+    @PutMapping("/return/{id}")
+    public ResponseEntity<Transaction> confirmReturn(@PathVariable Integer id) {
+        return ResponseEntity.ok(transactionService.confirmReturn(id));
     }
 
     @GetMapping
-    public ResponseEntity<List<Transaction>> getAllTransactions(){
+    public ResponseEntity<List<Transaction>> getAllTransactions() {
         return ResponseEntity.ok(transactionService.listTransactions());
     }
 
-    @GetMapping("/{responsible}")
-    public ResponseEntity<List<Transaction>> getByResponsible(@PathVariable String responsible){
+    @GetMapping("/pending")
+    public ResponseEntity<List<Transaction>> getPending() {
+        return ResponseEntity.ok(transactionService.listPending());
+    }
+
+    @GetMapping("/responsible/{responsible}")
+    public ResponseEntity<List<Transaction>> getByResponsible(@PathVariable String responsible) {
         return ResponseEntity.ok(transactionService.getTransctionByResponsible(responsible));
     }
 
-    @GetMapping("/search/{id}")
-    public ResponseEntity<Transaction> getByResponsible(@PathVariable Integer id){
+    @GetMapping("/employee/{employeeId}")
+    public ResponseEntity<List<Transaction>> getByEmployee(@PathVariable Integer employeeId) {
+        return ResponseEntity.ok(transactionService.getByEmployeeId(employeeId));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Transaction> getById(@PathVariable Integer id) {
         return ResponseEntity.ok(transactionService.getTransactionId(id));
     }
 }
