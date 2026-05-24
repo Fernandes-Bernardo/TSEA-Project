@@ -1,77 +1,127 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { transactionsApi, type Transaction } from "../../services/transactions";
+import Skeleton from "../ui/Skeleton";
+import { useToast } from "../ui/Toast";
 
-interface Registro {
-  id: number;
-  usuario: string;
-  ferramenta: string;
-  dataRetirada: string;
-  horaRetirada: string;
-  dataDevolucao: string | null;
-  horaDevolucao: string | null;
-}
+type Filtro = "todos" | "pendentes" | "devolvidos";
 
 function Historico() {
-  const [filtro, setFiltro] = useState("");
+  const { toast } = useToast();
+  const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [registros, setRegistros] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const historico: Registro[] = [
-    { id: 1, usuario: "Gabriel Soares", ferramenta: "Lâmina de serra", dataRetirada: "10/05/2026", horaRetirada: "08:30", dataDevolucao: "10/05/2026", horaDevolucao: "17:15" },
-    { id: 2, usuario: "Emily Silva", ferramenta: "Cortador de piso", dataRetirada: "09/05/2026", horaRetirada: "09:00", dataDevolucao: null, horaDevolucao: null },
-    { id: 3, usuario: "Carlos Mendes", ferramenta: "Furadeira", dataRetirada: "08/05/2026", horaRetirada: "10:15", dataDevolucao: "08/05/2026", horaDevolucao: "16:00" },
-    { id: 4, usuario: "Ana Paula", ferramenta: "Serra circular", dataRetirada: "07/05/2026", horaRetirada: "14:00", dataDevolucao: "09/05/2026", horaDevolucao: "11:30" },
-  ];
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await transactionsApi.list();
+        setRegistros(data);
+      } catch (err) {
+        console.error("[historico] erro:", err);
+        toast("Erro ao carregar histórico.", "error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [toast]);
 
- 
-  const historicoFiltrado = historico.filter(item =>
-    item.usuario.toLowerCase().includes(filtro.toLowerCase()) ||
-    item.ferramenta.toLowerCase().includes(filtro.toLowerCase())
-  );
+  const filtrados = useMemo(() => {
+    return registros.filter((item) => {
+      const matchBusca =
+        item.responsible.toLowerCase().includes(busca.toLowerCase()) ||
+        item.toolName.toLowerCase().includes(busca.toLowerCase());
+      const matchStatus =
+        filtro === "todos" ||
+        (filtro === "pendentes" && !item.status) ||
+        (filtro === "devolvidos" && item.status);
+      return matchBusca && matchStatus;
+    });
+  }, [registros, busca, filtro]);
+
+  const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR") : "-");
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: "#BEBEBE" }}>
+    <div className="min-h-screen p-6 animate-fade-in" style={{ backgroundColor: "#BEBEBE" }}>
       <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
-       
-        <div className="flex items-center gap-2 bg-[#D9D9D9] rounded-full p-2 px-4 shadow-md">
-          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <span className="text-gray-700">Filtrar...</span>
-          <input
-            type="text"
-            placeholder=""
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-            className="flex-1 p-2 rounded-full bg-transparent focus:outline-none"
-          />
+        <header>
+          <h1 className="text-2xl font-bold text-primary tracking-tight">Histórico</h1>
+          <p className="text-gray-700 text-sm">Todas as retiradas e devoluções.</p>
+        </header>
+
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex items-center gap-2 bg-[#D9D9D9] rounded-full p-2 px-4 shadow-md flex-1 transition-shadow focus-within:shadow-lg">
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar usuário ou ferramenta..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="flex-1 p-1 rounded-full bg-transparent focus:outline-none"
+            />
+          </div>
+          <div className="bg-[#D9D9D9] rounded-full p-1 shadow-md flex">
+            {(["todos", "pendentes", "devolvidos"] as Filtro[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFiltro(f)}
+                className={`px-4 py-1.5 rounded-full text-sm transition-all duration-200 ease-apple font-medium capitalize ${
+                  filtro === f ? "bg-primary text-white shadow" : "text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="bg-[#D9D9D9] rounded-lg border-2 border-primary overflow-hidden">
+        <div className="bg-[#D9D9D9] rounded-lg border-2 border-primary overflow-hidden animate-slide-up">
           <table className="w-full text-left">
             <thead className="bg-primary text-white">
               <tr>
                 <th className="p-3">Usuário</th>
                 <th className="p-3">Ferramenta</th>
+                <th className="p-3">Qtd.</th>
                 <th className="p-3">Retirada</th>
                 <th className="p-3">Devolução</th>
                 <th className="p-3">Status</th>
               </tr>
             </thead>
             <tbody>
-              {historicoFiltrado.map((item, idx) => (
-                <tr
-                  key={item.id}
-                  className={idx !== historicoFiltrado.length - 1 ? "border-b border-highlight" : ""}
-                >
-                  <td className="p-3 font-medium border-r border-highlight">{item.usuario}</td>
-                  <td className="p-3 border-r border-highlight">{item.ferramenta}</td>
-                  <td className="p-3 border-r border-highlight">{item.dataRetirada} {item.horaRetirada}</td>
-                  <td className="p-3 border-r border-highlight">{item.dataDevolucao ? `${item.dataDevolucao} ${item.horaDevolucao}` : "-"}</td>
-                  <td className="p-3">
-                    <span className={`font-semibold ${item.dataDevolucao ? "text-green-600" : "text-red-600"}`}>
-                      {item.dataDevolucao ? "Devolvido" : "Pendente"}
-                    </span>
+              {loading &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={`sk-${i}`} className="border-b border-highlight/50">
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <td key={j} className="p-3">
+                        <Skeleton className="h-4 w-full" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              {!loading &&
+                filtrados.map((item, idx) => (
+                  <tr key={item.id} className={`${idx !== filtrados.length - 1 ? "border-b border-highlight" : ""} transition-colors hover:bg-black/5`}>
+                    <td className="p-3 font-medium border-r border-highlight">{item.responsible}</td>
+                    <td className="p-3 border-r border-highlight">{item.toolName}</td>
+                    <td className="p-3 border-r border-highlight">{item.toolQuantity}</td>
+                    <td className="p-3 border-r border-highlight">{fmt(item.caughtDate)}</td>
+                    <td className="p-3 border-r border-highlight">{fmt(item.returnedDate)}</td>
+                    <td className="p-3">
+                      <span className={`font-semibold ${item.status ? "text-green-600" : "text-red-600"}`}>
+                        {item.status ? "Devolvido" : "Pendente"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              {!loading && filtrados.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-gray-600">
+                    Sem registros para os filtros atuais.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
