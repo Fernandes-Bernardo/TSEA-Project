@@ -2,9 +2,10 @@ import { useState } from "react";
 
 interface LoginCompProps {
   onLogin: (employeeId: string, senha: string) => void;
+  loading?: boolean;
 }
 
-function LoginComp({ onLogin }: LoginCompProps) {
+function LoginComp({ onLogin, loading = false }: LoginCompProps) {
   const [employeeId, setEmployeeId] = useState("");
   const [senha, setSenha] = useState("");
 
@@ -25,8 +26,9 @@ function LoginComp({ onLogin }: LoginCompProps) {
           type="text"
           value={employeeId}
           onChange={(e) => setEmployeeId(e.target.value)}
-          className="w-full p-3 rounded-md border border-gray-300 focus:outline-none focus:border-highlight"
+          className="w-full p-3 rounded-md border border-gray-300 transition-colors duration-200 focus:outline-none focus:border-highlight"
           placeholder="Digite seu ID"
+          autoFocus
         />
       </div>
       <div>
@@ -35,15 +37,16 @@ function LoginComp({ onLogin }: LoginCompProps) {
           type="password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          className="w-full p-3 rounded-md border border-gray-300 focus:outline-none focus:border-highlight"
+          className="w-full p-3 rounded-md border border-gray-300 transition-colors duration-200 focus:outline-none focus:border-highlight"
           placeholder="Digite sua senha"
         />
       </div>
       <button
         type="submit"
-        className="bg-highlight text-white py-2 rounded-md hover:bg-[#A06630] transition font-medium shadow-md mt-2"
+        disabled={loading}
+        className="bg-highlight text-white py-2 rounded-md hover:bg-[#A06630] transition-all duration-200 ease-apple active:scale-[0.98] font-medium shadow-md mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        Entrar
+        {loading ? "Entrando..." : "Entrar"}
       </button>
     </form>
   );

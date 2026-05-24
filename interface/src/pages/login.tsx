@@ -1,32 +1,45 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import LoginComp from "../components/login/loginComp";
 import logoTSEA from "../assets/logoTSEA.png";
 import logoIcon from "../assets/logoIcon.svg";
+import { login } from "../services/auth";
 
 function Login() {
-  const handleLogin = (employeeId: string, senha: string) => {
-    console.log(employeeId, senha);
-    alert(`Bem-vindo, ${employeeId}! (simulação)`);
-    // Redirecionar para dashboard após login
-    // window.location.href = "/";
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (employeeId: string, senha: string) => {
+    setLoading(true);
+    try {
+      const id = Number(employeeId);
+      if (!Number.isFinite(id)) {
+        console.error("[login] employeeId não numérico:", employeeId);
+        return;
+      }
+      const user = await login(id, senha);
+      navigate(user.role === "ROLE_ADMIN" ? "/admin" : "/");
+    } catch (err) {
+      console.error("[login] falha:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center gap-8"
-      style={{ backgroundColor: "#2C4F55" }} 
+      style={{ backgroundColor: "#2C4F55" }}
     >
-    
-      <div className="bg-white rounded-lg shadow-lg p-10 w-full max-w-lg">
-       
+      <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-lg animate-scale-in">
         <div className="flex justify-center mb-8">
           <img src={logoTSEA} alt="TSEA" className="h-24 w-auto" />
         </div>
 
-        <LoginComp onLogin={handleLogin} />
+        <LoginComp onLogin={handleLogin} loading={loading} />
       </div>
 
-  
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex items-center justify-center gap-2 animate-fade-in">
         <span className="text-xl font-bold" style={{ color: "#C48248" }}>
           Zaiko
         </span>
