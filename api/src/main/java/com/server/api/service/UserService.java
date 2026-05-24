@@ -2,8 +2,10 @@ package com.server.api.service;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.server.api.dto.user.UserRequest;
 import com.server.api.dto.user.UserResponse;
@@ -55,13 +57,18 @@ public class UserService {
                 .stream()
                 .findFirst()
                 .map(this::toResponse)
-                .orElseThrow(() -> new RuntimeException("Usuario não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
     }
 
     public UserResponse getUserByEmployeeID(Integer id) {
         return userRepository.findByEmployeeId(id)
                 .map(this::toResponse)
-                .orElseThrow(() -> new RuntimeException("Usuario não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
     }
 
+    public void deleteByEmployeeId(Integer employeeId) {
+        var user = userRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+        userRepository.delete(user);
+    }
 }

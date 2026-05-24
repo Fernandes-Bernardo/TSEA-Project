@@ -43,8 +43,7 @@ public class ToolsService {
             throw new IllegalArgumentException("Preencha o campo para buscar a peça");
         }
 
-        var tools = toolsRepository.findByName(name);
-        return tools;
+        return toolsRepository.findByNameContainingIgnoreCase(name);
     }
 
     public List<Tools> listTools(){
