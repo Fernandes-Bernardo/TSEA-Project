@@ -41,6 +41,9 @@ public class Tools implements Serializable{
     @Column(name="levelSecurity", nullable = false)
     private String levelSecurity;
 
+    @Column(name="image_path")
+    private String imagePath;
+
     @CreationTimestamp
     private Instant dateCreation;
 
