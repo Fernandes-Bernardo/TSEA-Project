@@ -3,7 +3,8 @@
 # Zaiko — Sistema de Controle de Ferramentas TSEA
 
 Plataforma de gestão de ferramentaria e consumíveis com leitura por código de barras,
-controle de retirada/devolução, catálogo com imagens e painel administrativo.
+fluxo de empréstimo com múltiplos itens, controle de entrega e devolução por almoxarife,
+catálogo com imagens e painel administrativo.
 
 [![Java](https://img.shields.io/badge/Java-17-007396?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.6-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -35,16 +36,17 @@ controle de retirada/devolução, catálogo com imagens e painel administrativo.
 ## Visão geral
 
 O **Zaiko** controla o ciclo de vida das ferramentas e consumíveis do depósito:
-quem pegou, quando, quanto, e quando devolveu. A identificação do colaborador
-é feita por **crachá com código de barras** (leitor USB que emula teclado),
-e o estoque é atualizado em tempo real a cada movimentação.
+quem solicitou, quem entregou, quando, quanto, e quando devolveu.
+A identificação do colaborador é feita por **crachá com código de barras**
+(leitor USB que emula teclado), e o estoque é atualizado em tempo real a cada movimentação.
 
-A aplicação tem dois perfis de uso:
+A aplicação tem três perfis de uso:
 
-| Perfil       | O que faz                                                                                  |
-|--------------|---------------------------------------------------------------------------------------------|
-| **Usuário**  | Vê o catálogo do setor, retira ferramentas escaneando o crachá, devolve quando terminar.    |
-| **Admin**    | Gerencia catálogo, imagens dos produtos, vê pendências, histórico completo e confirma devoluções. |
+| Perfil          | O que faz                                                                                              |
+|-----------------|--------------------------------------------------------------------------------------------------------|
+| **Usuário**     | Monta solicitações com múltiplos itens em um carrinho, confirma com o crachá, acompanha próprios empréstimos. |
+| **Almoxarife**  | Vê pedidos pendentes, valida o crachá no momento da entrega, confirma devoluções, consulta histórico e catálogo. |
+| **Admin**       | Gerencia catálogo, imagens e usuários. Tem visão completa do histórico de empréstimos.                 |
 
 ---
 
@@ -88,9 +90,9 @@ A aplicação tem dois perfis de uso:
                              v
         +------------------------------------------+
         |        Frontend (React + Vite)           |
-        |  - Páginas Usuário / Admin               |
+        |  - Páginas Usuário / Almoxarife / Admin  |
         |  - useBarcodeScanner (keydown buffer)    |
-        |  - Axios + JWT interceptor               |
+        |  - Cart drawer + role-based ProtectedRoute |
         |  - Toast / ConfirmModal / SuccessModal   |
         +-------------------+----------------------+
                             |
@@ -126,23 +128,25 @@ TSEA-Project/
 ├── api/                          # Backend Spring Boot
 │   └── src/main/java/com/server/api/
 │       ├── config/               # Security, CORS, Bootstrap, ExceptionHandler
-│       ├── controller/           # REST endpoints
-│       ├── service/              # Regras de negócio
+│       ├── controller/           # REST endpoints (Auth, Tools, Loans, Users, Sectors)
+│       ├── service/              # Regras de negócio (LoanService, ToolImageService, ...)
 │       ├── repository/           # Spring Data JPA
-│       ├── model/                # Entidades JPA
-│       └── dto/                  # Request/Response DTOs
+│       ├── model/                # Entidades JPA + enums (Loan, LoanItem, Tools, User, Sector)
+│       └── dto/                  # Request/Response DTOs por contexto
 │
 ├── interface/                    # Frontend React
 │   └── src/
 │       ├── components/
-│       │   ├── Admin/            # Catálogo, CRUD, Histórico, Pendências
-│       │   ├── setorPanel/       # Painel do usuário
+│       │   ├── Admin/            # Catálogo, CRUD, Histórico
+│       │   ├── Almoxarife/       # Pedidos, Ativos, Histórico, LoanRow
+│       │   ├── setorPanel/       # Painel do usuário + CartDrawer
+│       │   ├── user/             # Meus empréstimos
 │       │   ├── login/            # Tela de login
 │       │   └── ui/               # Toast, Modal, Spinner, Skeleton
 │       ├── hooks/                # useBarcodeScanner
-│       ├── services/             # api.ts, auth.ts, tools.ts, ...
-│       ├── routes/               # Rotas protegidas
-│       └── pages/
+│       ├── services/             # api, auth, tools, users, loans, sectors
+│       ├── routes/               # Rotas protegidas com role guards
+│       └── pages/                # home, admin, almoxarife, login
 │
 └── README.md
 ```
@@ -151,38 +155,62 @@ TSEA-Project/
 
 ## Modelo de dados
 
-| Entidade        | Campos principais                                                              |
-|-----------------|---------------------------------------------------------------------------------|
-| **User**        | id (UUID), employeeId (int único), name, password (BCrypt), role (USER/ADMIN)   |
-| **Tools**       | id (UUID), name, type (FERRAMENTA/CONSUMIVEL), quantity, imagePath              |
-| **Transaction** | id (UUID), responsible, toolName, toolQuantity, caughtDate, returnedDate, status |
+| Entidade        | Campos principais                                                                                |
+|-----------------|---------------------------------------------------------------------------------------------------|
+| **User**        | id (UUID), employeeId (int único), name, password (BCrypt), role (USER/ADMIN/ALMOXARIFE), sector  |
+| **Tools**       | id (UUID), name, description, type (DAILY_USE/CONSUMABLE), quantity, minQuantity, levelSecurity, imagePath |
+| **Loan**        | id (UUID), employeeId, responsibleName, status, deliveredByEmployeeId, requestedAt, deliveredAt, returnedAt, notes |
+| **LoanItem**    | id (UUID), loan, toolId, toolName, toolType, quantity, returnedQuantity                          |
 
-Relação implícita: `Transaction.responsible` referencia o `employeeId` de um `User`,
-e `toolName` o `name` de uma `Tools`. O `status` booleano marca devolução
-(`false` = pendente, `true` = devolvido).
+### Estados do empréstimo
+
+```
+   REQUESTED          DELIVERED                   RETURNED
+   (criado pelo  ───► (entregue pelo   ─────────► (todos os itens
+    usuário)           almoxarife)                 ferramentas voltaram,
+                                                   ou empréstimo era
+                                                   só de consumíveis)
+       │
+       └────► CANCELLED  (cancelado antes da entrega)
+```
+
+- `employeeId` é gerado pelo backend como `max(employeeId) + 1` começando em 1000.
+- `minQuantity` aciona o badge "estoque baixo" no catálogo do admin.
+- `levelSecurity` é normalizado no frontend para "Baixo / Médio / Alto".
+- Itens **consumíveis** marcam `returnedQuantity = quantity` automaticamente na entrega
+  e não exigem devolução manual.
 
 ---
 
 ## Fluxos principais
 
-### Retirada (Usuário)
+### Solicitação (Usuário)
 
-1. Usuário abre o painel do setor.
-2. Seleciona a ferramenta e a quantidade.
-3. Modal de confirmação abre aguardando leitura do crachá.
-4. O hook `useBarcodeScanner` captura a sequência de teclas do leitor USB,
-   detecta o `Enter` final e dispara o `onScan` com o `employeeId`.
-5. Backend valida estoque, decrementa quantidade e cria a transação dentro
-   de uma transação JPA (`@Transactional`).
-6. Frontend exibe `SuccessModal` com auto-dismiss em 1.8s.
+1. Usuário abre o catálogo do setor.
+2. Adiciona um ou mais itens ao **carrinho** (`CartDrawer`), ajustando quantidades.
+3. Clica em **Finalizar pedido**.
+4. Um modal abre aguardando leitura do crachá. O hook `useBarcodeScanner` captura
+   a sequência de teclas e dispara `onScan` ao detectar o `Enter` final.
+5. O backend cria um `Loan` com status `REQUESTED` e valida disponibilidade de estoque.
+6. Frontend exibe `SuccessModal` e o pedido aparece como pendente em "Meus empréstimos".
 
-### Devolução (Admin)
+### Entrega (Almoxarife)
 
-1. Admin abre "Ferramentas pendentes".
-2. Clica em "Confirmar devolução" na linha desejada.
-3. `ConfirmModal` substitui o `confirm()` nativo.
-4. Backend marca `status=true`, grava `returnedDate` e incrementa o estoque,
-   tudo numa única transação.
+1. Almoxarife abre "Pedidos pendentes".
+2. Clica em **Confirmar entrega** no pedido desejado.
+3. Modal pede a leitura do crachá do funcionário; o backend valida que o
+   `scannedEmployeeId` corresponde ao `employeeId` do empréstimo.
+4. Estoque é decrementado, o status passa para `DELIVERED` (ou direto para
+   `RETURNED` se o empréstimo for **só de consumíveis**).
+
+### Devolução (Almoxarife)
+
+1. Almoxarife abre "Empréstimos ativos".
+2. Para empréstimos com ferramentas, clica em **Confirmar devolução**.
+3. Backend devolve o saldo das ferramentas ao estoque e marca o empréstimo
+   como `RETURNED`.
+4. Empréstimos apenas com consumíveis **não exibem botão de devolução** —
+   já foram fechados na entrega.
 
 ### Upload de imagem (Admin)
 
@@ -200,8 +228,8 @@ e `toolName` o `name` de uma `Tools`. O `status` booleano marca devolução
 
 ### Autenticação
 
-| Método | Rota              | Acesso  | Descrição                          |
-|--------|-------------------|---------|------------------------------------|
+| Método | Rota              | Acesso  | Descrição                                 |
+|--------|-------------------|---------|-------------------------------------------|
 | POST   | `/api/auth/login` | público | Login com employeeId + senha, devolve JWT |
 
 ### Ferramentas
@@ -218,23 +246,37 @@ e `toolName` o `name` de uma `Tools`. O `status` booleano marca devolução
 | GET    | `/api/tools/{id}/image`       | público | Bytes da imagem            |
 | DELETE | `/api/tools/{id}/image`       | ADMIN   | Remove imagem              |
 
-### Transações
+### Empréstimos (Loans)
 
-| Método | Rota                                  | Acesso  | Descrição              |
-|--------|---------------------------------------|---------|------------------------|
-| GET    | `/api/transacoes`                     | auth    | Lista todas            |
-| GET    | `/api/transacoes/pending`             | auth    | Apenas pendentes       |
-| GET    | `/api/transacoes/employee/{id}`       | auth    | Por colaborador        |
-| POST   | `/api/transacoes`                     | auth    | Cria retirada          |
-| PUT    | `/api/transacoes/return/{id}`         | auth    | Confirma devolução     |
+| Método | Rota                              | Acesso              | Descrição                                       |
+|--------|-----------------------------------|---------------------|-------------------------------------------------|
+| POST   | `/api/loans`                      | auth                | Cria solicitação (usuário só cria pra si)       |
+| GET    | `/api/loans`                      | ADMIN / ALMOX       | Lista todos                                     |
+| GET    | `/api/loans/pending`              | ADMIN / ALMOX       | Apenas com status `REQUESTED`                   |
+| GET    | `/api/loans/active`               | ADMIN / ALMOX       | Apenas com status `DELIVERED`                   |
+| GET    | `/api/loans/employee/{id}`        | dono / ADMIN / ALMOX| Empréstimos de um colaborador                   |
+| GET    | `/api/loans/me`                   | auth                | Empréstimos do usuário logado                   |
+| GET    | `/api/loans/{id}`                 | dono / ADMIN / ALMOX| Detalhe                                         |
+| PUT    | `/api/loans/{id}/deliver`         | ADMIN / ALMOX       | Confirma entrega validando crachá lido          |
+| PUT    | `/api/loans/{id}/return-item`     | ADMIN / ALMOX       | Devolução parcial de um item                    |
+| PUT    | `/api/loans/{id}/return`          | ADMIN / ALMOX       | Devolve tudo o que estava pendente              |
+| DELETE | `/api/loans/{id}`                 | dono / ADMIN / ALMOX| Cancela enquanto está `REQUESTED`               |
 
 ### Usuários
 
-| Método | Rota                       | Acesso  | Descrição        |
-|--------|----------------------------|---------|------------------|
-| GET    | `/api/users`               | ADMIN   | Lista            |
-| POST   | `/api/users`               | ADMIN   | Cria             |
-| DELETE | `/api/users/{employeeId}`  | ADMIN   | Remove           |
+| Método | Rota                       | Acesso          | Descrição                              |
+|--------|----------------------------|-----------------|----------------------------------------|
+| GET    | `/api/users`               | ADMIN           | Lista                                  |
+| GET    | `/api/users/search?name=`  | ADMIN           | Busca por nome (parcial, case-insensitive) |
+| GET    | `/api/users/{employeeId}`  | ADMIN / ALMOX   | Detalhe por crachá                     |
+| POST   | `/api/users`               | ADMIN           | Cria (employeeId gerado automaticamente) |
+| DELETE | `/api/users/{employeeId}`  | ADMIN           | Remove                                 |
+
+### Setores
+
+| Método | Rota             | Acesso | Descrição                                         |
+|--------|------------------|--------|---------------------------------------------------|
+| GET    | `/api/sectors`   | auth   | Lista padronizada de setores (PT-BR)              |
 
 ---
 
@@ -244,7 +286,10 @@ e `toolName` o `name` de uma `Tools`. O `status` booleano marca devolução
 |-------------------------------|----------------------------------------------------------------------------|
 | Senhas                        | BCrypt                                                                     |
 | Autenticação                  | JWT HS256 com segredo via variável de ambiente (mín. 256 bits)             |
-| Autorização                   | `@PreAuthorize("hasAuthority('ROLE_ADMIN')")` em endpoints sensíveis       |
+| Autorização                   | `@PreAuthorize` com `ROLE_ADMIN`, `ROLE_ALMOXARIFE`, `ROLE_USER`           |
+| Validação na entrega          | Backend confere que o `scannedEmployeeId` bate com o `employeeId` do empréstimo |
+| Geração de employeeId         | Sequencial (`max + 1`, mínimo 1000) — sem colisão de random                |
+| Setores                       | Validação contra lista padronizada (`Sector.VALUES`)                       |
 | CORS                          | Permite apenas `localhost` em dev (configurável)                           |
 | CSRF                          | Desabilitado (API stateless com JWT)                                       |
 | Mensagens de erro             | `GlobalExceptionHandler` sem stack trace, mensagens neutras no login       |
@@ -281,7 +326,8 @@ npm install
 npm run dev
 ```
 
-A interface sobe em `http://localhost:5173`.
+A interface sobe em `http://localhost:5173` e redireciona o usuário para
+`/` (usuário), `/almoxarife` ou `/admin` conforme o papel no JWT.
 
 ---
 
