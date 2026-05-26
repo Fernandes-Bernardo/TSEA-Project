@@ -1,9 +1,3 @@
-"""
-Autenticação da dashboard usando a API Spring Boot.
-
-A dashboard NÃO mantém usuários próprios — delega o login a `/api/auth/login`,
-extrai o JWT e exige role ROLE_ADMIN para acessar.
-"""
 from __future__ import annotations
 
 import base64
@@ -31,19 +25,14 @@ class AuthResult:
 def _decode_jwt_payload(token: str) -> dict | None:
     try:
         payload = token.split(".")[1]
-        # add padding for base64 decode
         padded = payload + "=" * (-len(payload) % 4)
         return json.loads(base64.urlsafe_b64decode(padded))
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:
         log.warning("Erro ao decodificar JWT: %s", ex)
         return None
 
 
 def login(employee_id: int, password: str) -> AuthResult:
-    """
-    Faz login no backend e devolve token + papel.
-    Só permite ADMIN — outros papéis recebem AuthResult(success=False, error=...).
-    """
     try:
         resp = requests.post(
             f"{API_URL}/api/auth/login",

@@ -1,11 +1,3 @@
-"""
-Configuração central da dashboard.
-
-Carrega variáveis de ambiente (.env) e expõe paletas de cores
-para tema dark/light. Todas as cores derivam do branding Zaiko:
-- primary  #2C4F55  (teal)
-- highlight #C48248 (laranja queimado)
-"""
 from __future__ import annotations
 
 import os
@@ -15,8 +7,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
-# ---------- Conexão -----------------------------------------------------------
 
 API_URL = os.getenv("API_URL", "http://localhost:8080").rstrip("/")
 
@@ -37,8 +27,6 @@ def database_url() -> str:
     )
 
 
-# ---------- Temas -------------------------------------------------------------
-
 @dataclass(frozen=True)
 class Theme:
     name: str
@@ -54,8 +42,6 @@ class Theme:
     warning: str
     danger: str
     grid: str
-
-    # Cores para séries (até 8). Combinam com highlight + teal.
     palette: tuple[str, ...]
 
     def to_plotly_template(self) -> dict:
@@ -91,21 +77,21 @@ DARK = Theme(
     border="#2F384B",
     text="#E6E9EE",
     text_muted="#8C95A6",
-    primary="#3F8A93",       # teal levemente clareado pra contraste no dark
-    highlight="#E0975A",     # laranja vívido
+    primary="#3F8A93",
+    highlight="#E0975A",
     success="#4ADE80",
     warning="#FBBF24",
     danger="#F87171",
     grid="#262E3D",
     palette=(
-        "#E0975A",  # highlight
-        "#3F8A93",  # teal
-        "#FBBF24",  # amber
-        "#4ADE80",  # green
-        "#60A5FA",  # blue
-        "#A78BFA",  # purple
-        "#F472B6",  # pink
-        "#94A3B8",  # slate
+        "#E0975A",
+        "#3F8A93",
+        "#FBBF24",
+        "#4ADE80",
+        "#60A5FA",
+        "#A78BFA",
+        "#F472B6",
+        "#94A3B8",
     ),
 )
 

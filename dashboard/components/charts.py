@@ -1,10 +1,3 @@
-"""
-Construtores de Figures Plotly.
-
-Cada função recebe um DataFrame já agregado + o tema atual e devolve uma
-figure pronta para ser plotada. Mantemos o estilo (margens, hover, etc.)
-centralizado aqui.
-"""
 from __future__ import annotations
 
 import pandas as pd
@@ -174,8 +167,6 @@ def type_distribution(df: pd.DataFrame, theme: Theme) -> go.Figure:
     fig.update_layout(margin=dict(l=40, r=30, t=20, b=30))
     return _apply_theme(fig, theme)
 
-
-# ---------- helpers ----------------------------------------------------------
 
 def _alpha(hex_color: str, alpha: float) -> str:
     c = hex_color.lstrip("#")

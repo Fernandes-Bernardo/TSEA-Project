@@ -1,4 +1,3 @@
-"""Barra de filtros do header."""
 from __future__ import annotations
 
 from datetime import date, timedelta

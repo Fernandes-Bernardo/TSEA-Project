@@ -1,9 +1,3 @@
-"""
-Engine SQLAlchemy compartilhado.
-
-A dashboard sempre lê do banco — não escreve. Por isso usamos um pool pequeno
-e mantemos o engine como singleton por processo.
-"""
 from __future__ import annotations
 
 from functools import lru_cache

@@ -1,4 +1,3 @@
-"""Tela de login. Apenas ADMIN consegue entrar."""
 from __future__ import annotations
 
 from dash import html, dcc

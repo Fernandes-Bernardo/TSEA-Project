@@ -1,4 +1,3 @@
-"""Cards de KPI no topo da dashboard."""
 from __future__ import annotations
 
 from dash import html

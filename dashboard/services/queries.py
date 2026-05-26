@@ -1,10 +1,3 @@
-"""
-Consultas SQL agregadas para a dashboard.
-
-Todas as funções aceitam filtros opcionais e devolvem DataFrames pandas.
-Os filtros são aplicados nos SELECTs (não em memória) para escalar bem
-mesmo com volumes maiores.
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -17,18 +10,15 @@ from sqlalchemy import text
 from services.db import get_engine
 
 
-# ---------- Filtros -----------------------------------------------------------
-
 @dataclass(frozen=True)
 class Filters:
     start: Optional[date] = None
     end: Optional[date] = None
-    sector: Optional[str] = None         # "todos" / nome
-    status: Optional[str] = None         # REQUESTED / DELIVERED / RETURNED / CANCELLED / todos
-    tool_type: Optional[str] = None      # DAILY_USE / CONSUMABLE / todos
+    sector: Optional[str] = None
+    status: Optional[str] = None
+    tool_type: Optional[str] = None
 
     def loan_where(self) -> tuple[str, dict]:
-        """Cláusula WHERE aplicada a `loans l` (alias `l`) + parâmetros."""
         clauses: list[str] = []
         params: dict = {}
         if self.start:
@@ -56,10 +46,7 @@ class Filters:
         return where, params
 
 
-# ---------- KPIs --------------------------------------------------------------
-
 def kpis(f: Filters) -> dict:
-    """KPIs principais do header."""
     where, params = f.loan_where()
     sql = f"""
         SELECT
@@ -87,7 +74,6 @@ def kpis(f: Filters) -> dict:
 
 
 def stock_health() -> dict:
-    """Indicador de saúde de estoque (sem filtros — visão global)."""
     sql = """
         SELECT
           COUNT(*)                                            AS total_items,
@@ -107,8 +93,6 @@ def stock_health() -> dict:
         "total_units":  int(row.get("total_units") or 0),
     }
 
-
-# ---------- Séries temporais e rankings --------------------------------------
 
 def loans_per_day(f: Filters) -> pd.DataFrame:
     where, params = f.loan_where()
@@ -202,7 +186,6 @@ def loans_by_tool_type(f: Filters) -> pd.DataFrame:
 
 
 def loan_details(f: Filters, limit: int = 500) -> pd.DataFrame:
-    """Tabela detalhada com os empréstimos do período. Limitada por segurança."""
     where, params = f.loan_where()
     params = {**params, "lim": limit}
     sql = f"""
@@ -223,8 +206,6 @@ def loan_details(f: Filters, limit: int = 500) -> pd.DataFrame:
     """
     return pd.read_sql(text(sql), get_engine(), params=params)
 
-
-# ---------- Listas auxiliares para os filtros --------------------------------
 
 def list_sectors() -> list[str]:
     sql = "SELECT DISTINCT sector FROM users WHERE sector IS NOT NULL ORDER BY 1"
