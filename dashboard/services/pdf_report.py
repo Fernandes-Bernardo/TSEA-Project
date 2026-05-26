@@ -1,15 +1,3 @@
-"""
-Gera o relatório PDF a partir dos filtros atuais.
-
-Usa ReportLab para a estrutura (capa, tabelas, parágrafos) e Kaleido
-para renderizar as figures Plotly em PNG e embedá-las no PDF.
-
-Layout:
-  Página 1 — capa + sumário executivo (KPIs)
-  Página 2 — gráficos (séries temporais, status, setor)
-  Página 3 — gráficos (top tools, top users, tipos)
-  Página 4+ — tabela detalhada (paginação automática do ReportLab)
-"""
 from __future__ import annotations
 
 import io
@@ -17,7 +5,10 @@ import logging
 from datetime import datetime
 from typing import IO
 
-import plotly.graph_objects as go
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -32,27 +23,25 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from config import Theme
-from components.charts import (
-    sector_donut,
-    status_donut,
-    time_series,
-    top_tools_bar,
-    top_users_bar,
-    type_distribution,
-)
 from services import queries
 from services.queries import Filters
 
 log = logging.getLogger(__name__)
 
-# Cores do PDF (sempre tema claro — papel impresso)
 BRAND_PRIMARY = colors.HexColor("#2C4F55")
 BRAND_HIGHLIGHT = colors.HexColor("#C48248")
 TEXT = colors.HexColor("#1A1F26")
 MUTED = colors.HexColor("#5B6471")
 BG_SOFT = colors.HexColor("#F5F2EF")
 BORDER = colors.HexColor("#D9D2CB")
+
+MPL_PALETTE = [
+    "#C48248", "#2C4F55", "#D97706", "#16A34A",
+    "#1D4ED8", "#7C3AED", "#DB2777", "#475569",
+]
+MPL_TEXT = "#1A1F26"
+MPL_MUTED = "#5B6471"
+MPL_GRID = "#E5E0DA"
 
 
 def _styles() -> dict[str, ParagraphStyle]:
@@ -87,20 +76,161 @@ def _styles() -> dict[str, ParagraphStyle]:
     }
 
 
-def _fig_to_image(fig: go.Figure, *, width: float, height: float) -> Image:
-    """Renderiza Plotly para PNG em memória e devolve um flowable Image."""
-    fig = go.Figure(fig)
-    # Para impressão, força layout claro (fundo branco)
-    fig.update_layout(
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font_color="#1A1F26",
-        xaxis=dict(gridcolor="#E5E0DA", linecolor="#B4ADA6"),
-        yaxis=dict(gridcolor="#E5E0DA", linecolor="#B4ADA6"),
-        margin=dict(l=50, r=30, t=20, b=40),
-    )
-    png_bytes = fig.to_image(format="png", width=900, height=int(900 * (height / width)), scale=2)
-    return Image(io.BytesIO(png_bytes), width=width, height=height)
+def _new_axes(width_in: float = 9.0, height_in: float = 4.0):
+    fig, ax = plt.subplots(figsize=(width_in, height_in), dpi=110)
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    for spine in ("left", "bottom"):
+        ax.spines[spine].set_color(MPL_MUTED)
+    ax.tick_params(colors=MPL_MUTED, labelsize=9)
+    ax.grid(True, color=MPL_GRID, linestyle="-", linewidth=0.6, axis="y")
+    ax.title.set_color(MPL_TEXT)
+    return fig, ax
+
+
+def _fig_to_image(fig, *, width: float, height: float) -> Image:
+    buf = io.BytesIO()
+    fig.tight_layout()
+    fig.savefig(buf, format="png", dpi=110, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    buf.seek(0)
+    return Image(buf, width=width, height=height)
+
+
+def _chart_timeseries(df: pd.DataFrame) -> Image:
+    fig, ax = _new_axes(9.0, 3.5)
+    if df.empty:
+        ax.text(0.5, 0.5, "Nenhum empréstimo no período",
+                ha="center", va="center", color=MPL_MUTED, fontsize=11)
+        ax.set_xticks([]); ax.set_yticks([])
+    else:
+        days = pd.to_datetime(df["day"])
+        ax.fill_between(days, df["total"], color=MPL_PALETTE[0], alpha=0.18)
+        ax.plot(days, df["total"], color=MPL_PALETTE[0], linewidth=2.2,
+                marker="o", markersize=5, label="Empréstimos")
+        ax.plot(days, df["delivered_or_returned"], color=MPL_PALETTE[1],
+                linewidth=1.4, linestyle="--", label="Entregues/Concluídos")
+        ax.legend(loc="upper left", frameon=False, fontsize=9, labelcolor=MPL_TEXT)
+        fig.autofmt_xdate(rotation=30)
+        ax.set_ylabel("Quantidade", color=MPL_MUTED, fontsize=9)
+    return _fig_to_image(fig, width=17 * cm, height=7 * cm)
+
+
+def _chart_top_tools(df: pd.DataFrame) -> Image:
+    fig, ax = _new_axes(9.0, 4.0)
+    if df.empty:
+        ax.text(0.5, 0.5, "Sem dados", ha="center", va="center",
+                color=MPL_MUTED, fontsize=11)
+        ax.set_xticks([]); ax.set_yticks([])
+    else:
+        df = df.sort_values("units")
+        bar_colors = [
+            MPL_PALETTE[0] if t == "DAILY_USE" else MPL_PALETTE[1]
+            for t in df["tool_type"]
+        ]
+        ax.barh(df["tool"], df["units"], color=bar_colors)
+        for i, v in enumerate(df["units"]):
+            ax.text(v, i, f"  {int(v)}", va="center", color=MPL_TEXT, fontsize=9)
+        ax.set_xlabel("Unidades", color=MPL_MUTED, fontsize=9)
+        ax.grid(True, color=MPL_GRID, linestyle="-", linewidth=0.6, axis="x")
+        ax.grid(False, axis="y")
+    return _fig_to_image(fig, width=17 * cm, height=8 * cm)
+
+
+def _chart_top_users(df: pd.DataFrame) -> Image:
+    fig, ax = _new_axes(9.0, 4.0)
+    if df.empty:
+        ax.text(0.5, 0.5, "Sem registros", ha="center", va="center",
+                color=MPL_MUTED, fontsize=11)
+        ax.set_xticks([]); ax.set_yticks([])
+    else:
+        df = df.sort_values("loans")
+        ax.barh(df["responsible"], df["loans"], color=MPL_PALETTE[1])
+        for i, v in enumerate(df["loans"]):
+            ax.text(v, i, f"  {int(v)}", va="center", color=MPL_TEXT, fontsize=9)
+        ax.set_xlabel("Empréstimos", color=MPL_MUTED, fontsize=9)
+        ax.grid(True, color=MPL_GRID, linestyle="-", linewidth=0.6, axis="x")
+        ax.grid(False, axis="y")
+    return _fig_to_image(fig, width=17 * cm, height=8 * cm)
+
+
+def _chart_donut_status(df: pd.DataFrame) -> Image:
+    fig, ax = _new_axes(6.0, 4.0)
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    ax.axis("off")
+    if df.empty:
+        ax.text(0.5, 0.5, "Sem dados", ha="center", va="center",
+                color=MPL_MUTED, fontsize=11, transform=ax.transAxes)
+    else:
+        status_label = {
+            "REQUESTED": "Aguardando",
+            "DELIVERED": "Em uso",
+            "RETURNED": "Concluídos",
+            "CANCELLED": "Cancelados",
+        }
+        palette_map = {
+            "REQUESTED": "#D97706",
+            "DELIVERED": "#2C4F55",
+            "RETURNED": "#16A34A",
+            "CANCELLED": "#475569",
+        }
+        labels = [status_label.get(s, s) for s in df["status"]]
+        sizes = df["total"]
+        colors_ = [palette_map.get(s, MPL_PALETTE[0]) for s in df["status"]]
+        wedges, _texts, autotexts = ax.pie(
+            sizes, labels=labels, colors=colors_,
+            wedgeprops=dict(width=0.45, edgecolor="white"),
+            autopct="%1.0f%%", pctdistance=0.78,
+            textprops=dict(color=MPL_TEXT, fontsize=9),
+        )
+        for at in autotexts:
+            at.set_color("white")
+            at.set_fontsize(8)
+    return _fig_to_image(fig, width=17 * cm, height=7 * cm)
+
+
+def _chart_donut_sector(df: pd.DataFrame) -> Image:
+    fig, ax = _new_axes(6.0, 4.0)
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    ax.axis("off")
+    if df.empty:
+        ax.text(0.5, 0.5, "Sem dados", ha="center", va="center",
+                color=MPL_MUTED, fontsize=11, transform=ax.transAxes)
+    else:
+        colors_ = (MPL_PALETTE * 4)[: len(df)]
+        wedges, _texts, autotexts = ax.pie(
+            df["total"], labels=df["sector"], colors=colors_,
+            wedgeprops=dict(width=0.45, edgecolor="white"),
+            autopct="%1.0f%%", pctdistance=0.78,
+            textprops=dict(color=MPL_TEXT, fontsize=9),
+        )
+        for at in autotexts:
+            at.set_color("white")
+            at.set_fontsize(8)
+    return _fig_to_image(fig, width=17 * cm, height=7 * cm)
+
+
+def _chart_type(df: pd.DataFrame) -> Image:
+    fig, ax = _new_axes(8.0, 3.2)
+    if df.empty:
+        ax.text(0.5, 0.5, "Sem dados", ha="center", va="center",
+                color=MPL_MUTED, fontsize=11)
+        ax.set_xticks([]); ax.set_yticks([])
+    else:
+        label_map = {"DAILY_USE": "Ferramentas", "CONSUMABLE": "Consumíveis"}
+        labels = [label_map.get(t, t) for t in df["tool_type"]]
+        bar_colors = [MPL_PALETTE[0] if t == "DAILY_USE" else MPL_PALETTE[1]
+                      for t in df["tool_type"]]
+        bars = ax.bar(labels, df["units"], color=bar_colors)
+        for b, v in zip(bars, df["units"]):
+            ax.text(b.get_x() + b.get_width() / 2, v, f" {int(v)}",
+                    ha="center", va="bottom", color=MPL_TEXT, fontsize=10)
+        ax.set_ylabel("Unidades", color=MPL_MUTED, fontsize=9)
+    return _fig_to_image(fig, width=17 * cm, height=6 * cm)
 
 
 def _kpi_grid(kpis: dict, stock: dict, st: dict) -> Table:
@@ -137,8 +267,6 @@ def _kpi_grid(kpis: dict, stock: dict, st: dict) -> Table:
         cell("Tempo médio em uso", avg_str, "Entrega → devolução"),
         cell("Itens em alerta", str(low), f"de {stock.get('total_items', 0)} cadastrados"),
     ]
-
-    # 3 colunas × 2 linhas
     rows = [cards[0:3], cards[3:6]]
     t = Table(rows, colWidths=[5.5 * cm] * 3, rowHeights=[2.4 * cm, 2.4 * cm])
     t.setStyle(
@@ -230,11 +358,7 @@ def _footer(canvas, doc):
     canvas.restoreState()
 
 
-def build_pdf(stream: IO[bytes], *, filters: Filters, theme: Theme) -> None:
-    """
-    Monta o PDF completo e escreve no stream fornecido.
-    `theme` é só usado pra preview; o PDF sempre usa paleta clara/impressa.
-    """
+def build_pdf(stream: IO[bytes], *, filters: Filters) -> None:
     st = _styles()
     doc = SimpleDocTemplate(
         stream,
@@ -249,7 +373,6 @@ def build_pdf(stream: IO[bytes], *, filters: Filters, theme: Theme) -> None:
 
     elements: list = []
 
-    # ----- Capa -----
     elements.append(Paragraph("Zaiko", ParagraphStyle(
         "brand", fontName="Helvetica-Bold", fontSize=28, leading=32,
         textColor=BRAND_HIGHLIGHT,
@@ -258,76 +381,53 @@ def build_pdf(stream: IO[bytes], *, filters: Filters, theme: Theme) -> None:
     elements.append(Paragraph(_format_filter_summary(filters), st["muted"]))
     elements.append(Spacer(1, 0.6 * cm))
 
-    # ----- KPIs -----
     elements.append(Paragraph("Sumário executivo", st["h2"]))
     kpis = queries.kpis(filters)
     stock = queries.stock_health()
     elements.append(_kpi_grid(kpis, stock, st))
     elements.append(Spacer(1, 0.6 * cm))
 
-    # ----- Gráfico de série temporal -----
     elements.append(Paragraph("Empréstimos ao longo do tempo", st["h2"]))
     try:
-        elements.append(_fig_to_image(
-            time_series(queries.loans_per_day(filters), theme),
-            width=17 * cm, height=7 * cm,
-        ))
-    except Exception:  # noqa: BLE001
+        elements.append(_chart_timeseries(queries.loans_per_day(filters)))
+    except Exception:
         log.exception("falha render time_series")
         elements.append(Paragraph("Não foi possível gerar este gráfico.", st["muted"]))
 
     elements.append(PageBreak())
 
-    # ----- Página 2: dois gráficos lado a lado, status e setor -----
     elements.append(Paragraph("Distribuição por status", st["h2"]))
     try:
-        elements.append(_fig_to_image(
-            status_donut(queries.loans_by_status(filters), theme),
-            width=17 * cm, height=7 * cm,
-        ))
-    except Exception:  # noqa: BLE001
-        log.exception("falha render status_donut")
+        elements.append(_chart_donut_status(queries.loans_by_status(filters)))
+    except Exception:
+        log.exception("falha render status")
 
     elements.append(Paragraph("Distribuição por setor", st["h2"]))
     try:
-        elements.append(_fig_to_image(
-            sector_donut(queries.loans_by_sector(filters), theme),
-            width=17 * cm, height=7 * cm,
-        ))
-    except Exception:  # noqa: BLE001
-        log.exception("falha render sector_donut")
+        elements.append(_chart_donut_sector(queries.loans_by_sector(filters)))
+    except Exception:
+        log.exception("falha render sector")
 
     elements.append(PageBreak())
 
-    # ----- Página 3: tops -----
     elements.append(Paragraph("Top 10 itens solicitados", st["h2"]))
     try:
-        elements.append(_fig_to_image(
-            top_tools_bar(queries.top_tools(filters, limit=10), theme),
-            width=17 * cm, height=8 * cm,
-        ))
-    except Exception:  # noqa: BLE001
+        elements.append(_chart_top_tools(queries.top_tools(filters, limit=10)))
+    except Exception:
         log.exception("falha render top_tools")
 
     elements.append(Paragraph("Top 10 colaboradores", st["h2"]))
     try:
-        elements.append(_fig_to_image(
-            top_users_bar(queries.top_users(filters, limit=10), theme),
-            width=17 * cm, height=8 * cm,
-        ))
-    except Exception:  # noqa: BLE001
+        elements.append(_chart_top_users(queries.top_users(filters, limit=10)))
+    except Exception:
         log.exception("falha render top_users")
 
     elements.append(PageBreak())
 
-    # ----- Página 4: tipo + tabela -----
     elements.append(Paragraph("Unidades por tipo", st["h2"]))
     try:
-        elements.append(_fig_to_image(
-            type_distribution(queries.loans_by_tool_type(filters), theme),
-            width=17 * cm, height=6 * cm,
-        ))
-    except Exception:  # noqa: BLE001
+        elements.append(_chart_type(queries.loans_by_tool_type(filters)))
+    except Exception:
         log.exception("falha render type_distribution")
 
     elements.append(Spacer(1, 0.4 * cm))
@@ -338,4 +438,4 @@ def build_pdf(stream: IO[bytes], *, filters: Filters, theme: Theme) -> None:
 
 
 def _is_nat(v) -> bool:
-    return repr(v) == "NaT" or (hasattr(v, "__ne__") and v != v)  # noqa: PLR0124
+    return repr(v) == "NaT" or (hasattr(v, "__ne__") and v != v)
