@@ -1,8 +1,10 @@
 import api from "./api";
 
+export type Role = "ROLE_ADMIN" | "ROLE_USER" | "ROLE_ALMOXARIFE";
+
 export interface AuthUser {
   employeeId: number;
-  role: "ROLE_ADMIN" | "ROLE_USER";
+  role: Role;
 }
 
 interface JwtPayload {
@@ -31,7 +33,7 @@ export async function login(employeeId: number, password: string): Promise<AuthU
   if (!payload) throw new Error("Token inválido");
   const user: AuthUser = {
     employeeId: Number(payload.sub),
-    role: payload.role as AuthUser["role"],
+    role: payload.role as Role,
   };
   localStorage.setItem("user", JSON.stringify(user));
   return user;
@@ -62,4 +64,26 @@ export function isAuthenticated(): boolean {
 
 export function isAdmin(): boolean {
   return getCurrentUser()?.role === "ROLE_ADMIN";
+}
+
+export function isAlmoxarife(): boolean {
+  return getCurrentUser()?.role === "ROLE_ALMOXARIFE";
+}
+
+export function isUser(): boolean {
+  return getCurrentUser()?.role === "ROLE_USER";
+}
+
+/**
+ * Caminho inicial baseado na role do usuário.
+ */
+export function homePathForRole(role: Role | undefined): string {
+  switch (role) {
+    case "ROLE_ADMIN":
+      return "/admin";
+    case "ROLE_ALMOXARIFE":
+      return "/almoxarife";
+    default:
+      return "/";
+  }
 }

@@ -1,18 +1,21 @@
 import { Navigate } from "react-router-dom";
 import type { ReactNode } from "react";
-import { isAdmin, isAuthenticated } from "../services/auth";
+import { getCurrentUser, homePathForRole, isAuthenticated, type Role } from "../services/auth";
 
 interface Props {
   children: ReactNode;
-  requireAdmin?: boolean;
+  roles?: Role[];
 }
 
-function ProtectedRoute({ children, requireAdmin = false }: Props) {
+function ProtectedRoute({ children, roles }: Props) {
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
-  if (requireAdmin && !isAdmin()) {
-    return <Navigate to="/" replace />;
+  if (roles && roles.length > 0) {
+    const user = getCurrentUser();
+    if (!user || !roles.includes(user.role)) {
+      return <Navigate to={homePathForRole(user?.role)} replace />;
+    }
   }
   return <>{children}</>;
 }

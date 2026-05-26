@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import LoginComp from "../components/login/loginComp";
 import logoTSEA from "../assets/logoTSEA.png";
 import logoIcon from "../assets/logoIcon.svg";
-import { login } from "../services/auth";
+import { homePathForRole, login } from "../services/auth";
 
 function Login() {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ function Login() {
         return;
       }
       const user = await login(id, senha);
-      navigate(user.role === "ROLE_ADMIN" ? "/admin" : "/");
+      navigate(homePathForRole(user.role));
     } catch (err) {
       console.error("[login] falha:", err);
     } finally {
