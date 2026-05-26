@@ -7,6 +7,7 @@ export interface Tool {
   name: string;
   description: string;
   quantity: number;
+  minQuantity: number;
   type: TypeTool;
   levelSecurity: string;
   imagePath?: string | null;
@@ -18,6 +19,7 @@ export interface ToolPayload {
   name: string;
   description: string;
   quantity: number;
+  minQuantity: number;
   type: TypeTool;
   levelSecurity: string;
 }
@@ -45,3 +47,38 @@ export const toolsApi = {
     return `${base}/api/tools/${id}/image`;
   },
 };
+
+/**
+ * Converte o valor livre de levelSecurity (low/medium/high, baixo/médio/alto, etc.)
+ * para o label padronizado em PT-BR.
+ */
+export function levelSecurityLabel(raw: string | null | undefined): string {
+  if (!raw) return "-";
+  const v = raw.trim().toLowerCase();
+  if (["low", "baixo", "baixa", "1"].includes(v)) return "Baixo";
+  if (["medium", "med", "médio", "medio", "média", "media", "2"].includes(v)) return "Médio";
+  if (["high", "alto", "alta", "3"].includes(v)) return "Alto";
+  return raw;
+}
+
+export function levelSecurityColor(raw: string | null | undefined): string {
+  const label = levelSecurityLabel(raw);
+  switch (label) {
+    case "Baixo":
+      return "text-green-700 bg-green-100";
+    case "Médio":
+      return "text-orange-700 bg-orange-100";
+    case "Alto":
+      return "text-red-700 bg-red-100";
+    default:
+      return "text-gray-700 bg-gray-200";
+  }
+}
+
+export function isLowStock(tool: Tool): boolean {
+  return tool.minQuantity > 0 && tool.quantity <= tool.minQuantity && tool.quantity > 0;
+}
+
+export function isOutOfStock(tool: Tool): boolean {
+  return tool.quantity === 0;
+}

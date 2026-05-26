@@ -34,6 +34,9 @@ public class Tools implements Serializable{
     @Column(name="quantity", nullable = false)
     private int quantity;
 
+    @Column(name="min_quantity", nullable = false)
+    private int minQuantity = 0;
+
     @Column(name="type", nullable = false)
     @Enumerated(EnumType.STRING)
     private TypeTool type;
@@ -56,11 +59,12 @@ public class Tools implements Serializable{
     }
 
     // Builders
-    
-    public Tools(String name, String description, int quantity, TypeTool type, String levelSecurity){
+
+    public Tools(String name, String description, int quantity, int minQuantity, TypeTool type, String levelSecurity){
         this.name = name;
         this.description = description;
         this.quantity = quantity;
+        this.minQuantity = minQuantity;
         this.type = type;
         this.levelSecurity = levelSecurity;
     }

@@ -18,13 +18,12 @@ public class ToolsService {
     }
 
     public Tools createTools(ToolsDto toolDto){
-        // Dto convert to Model
-
         var tool = new Tools(
             toolDto.name(),
-            toolDto.description(), 
+            toolDto.description(),
             toolDto.quantity(),
-            toolDto.type(), 
+            toolDto.minQuantity() == null ? 0 : toolDto.minQuantity(),
+            toolDto.type(),
             toolDto.levelSecurity()
         );
 
@@ -34,7 +33,7 @@ public class ToolsService {
     }
 
 
-    public Optional<Tools> getToolById(String id){ // Optional method to obtein tool by id
+    public Optional<Tools> getToolById(String id){
         return toolsRepository.findById(UUID.fromString(id));
     }
 
@@ -68,6 +67,12 @@ public class ToolsService {
             if(updTool.levelSecurity() != null){
                 tool.setLevelSecurity(updTool.levelSecurity());
             }
+            if(updTool.quantity() != null){
+                tool.setQuantity(updTool.quantity());
+            }
+            if(updTool.minQuantity() != null){
+                tool.setMinQuantity(updTool.minQuantity());
+            }
 
             toolsRepository.save(tool);
         }
@@ -89,6 +94,5 @@ public class ToolsService {
         if(name == null || name.trim().isEmpty()){
             throw new IllegalArgumentException("Campo não pode ser nulo");
         }
-        // toolsRepository.deleteByName(name);
     }
 }
