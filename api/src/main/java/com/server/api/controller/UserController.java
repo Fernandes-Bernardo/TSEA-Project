@@ -21,18 +21,21 @@ public class UserController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @GetMapping("/{employeeId}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_ALMOXARIFE')")
     public ResponseEntity<UserResponse> getByEmployeeId(@PathVariable Integer employeeId) {
         return ResponseEntity.ok(userService.getUserByEmployeeID(employeeId));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<UserResponse> getByName(@RequestParam String name) {
-        return ResponseEntity.ok(userService.getUserByName(name));
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<List<UserResponse>> searchByName(@RequestParam(required = false) String name) {
+        return ResponseEntity.ok(userService.searchByName(name));
     }
 
     @PostMapping

@@ -11,5 +11,6 @@ import com.server.api.model.User;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findByName(String name);
+    List<User> findByNameContainingIgnoreCase(String name);
     Optional<User> findByEmployeeId(Integer employeeId);
 }
