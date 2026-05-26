@@ -49,12 +49,17 @@ export default {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(20px)' },
         },
+        slideInRight: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
       },
       animation: {
         'fade-in': 'fadeIn 200ms ease-out both',
         'scale-in': 'scaleIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both',
         'slide-up': 'slideUp 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both',
         'slide-down': 'slideDown 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both',
+        'slide-in-right': 'slideInRight 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both',
         'pulse-soft': 'pulseSoft 1.4s ease-in-out infinite',
         'check-pop': 'checkPop 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both',
         'shimmer': 'shimmer 1.6s linear infinite',
