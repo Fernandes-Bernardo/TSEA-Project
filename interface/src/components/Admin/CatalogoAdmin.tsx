@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { toolsApi, type Tool } from "../../services/tools";
+import {
+  isLowStock,
+  isOutOfStock,
+  levelSecurityColor,
+  levelSecurityLabel,
+  toolsApi,
+  type Tool,
+} from "../../services/tools";
 import { MaterialCardSkeleton } from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
 
@@ -58,6 +65,7 @@ function CatalogoAdmin() {
       ferramentas: tools.filter((t) => t.type === "DAILY_USE").length,
       consumiveis: tools.filter((t) => t.type === "CONSUMABLE").length,
       estoque: tools.reduce((acc, t) => acc + t.quantity, 0),
+      estoqueBaixo: tools.filter((t) => isLowStock(t) || isOutOfStock(t)).length,
     }),
     [tools]
   );
@@ -70,11 +78,12 @@ function CatalogoAdmin() {
           <p className="text-gray-700 text-sm">Visão geral do inventário disponível.</p>
         </header>
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <StatCard label="Itens cadastrados" value={totais.total} />
           <StatCard label="Ferramentas" value={totais.ferramentas} />
           <StatCard label="Consumíveis" value={totais.consumiveis} />
           <StatCard label="Estoque total" value={totais.estoque} />
+          <StatCard label="Estoque baixo" value={totais.estoqueBaixo} highlight={totais.estoqueBaixo > 0} />
         </section>
 
         <section className="flex flex-col md:flex-row gap-3 md:items-center">
@@ -136,11 +145,17 @@ function CatalogoAdmin() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
   return (
-    <div className="bg-[#D9D9D9] rounded-xl p-4 shadow-md border border-primary/20 transition-all duration-300 ease-apple hover:-translate-y-0.5 hover:shadow-lg">
+    <div
+      className={`rounded-xl p-4 shadow-md border transition-all duration-300 ease-apple hover:-translate-y-0.5 hover:shadow-lg ${
+        highlight ? "bg-orange-50 border-orange-300" : "bg-[#D9D9D9] border-primary/20"
+      }`}
+    >
       <p className="text-xs uppercase tracking-wide text-gray-600">{label}</p>
-      <p className="text-2xl font-bold text-primary mt-1">{value}</p>
+      <p className={`text-2xl font-bold mt-1 ${highlight ? "text-orange-700" : "text-primary"}`}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -148,12 +163,21 @@ function StatCard({ label, value }: { label: string; value: number }) {
 function ToolCard({ tool }: { tool: Tool }) {
   const [imgError, setImgError] = useState(false);
   const tipo = tool.type === "CONSUMABLE" ? "Consumível" : "Ferramenta";
-  const estoqueBaixo = tool.quantity > 0 && tool.quantity <= 5;
-  const semEstoque = tool.quantity === 0;
+  const estoqueBaixo = isLowStock(tool);
+  const semEstoque = isOutOfStock(tool);
   const hasImage = tool.imagePath && !imgError;
 
   return (
-    <article className="bg-[#D9D9D9] rounded-xl overflow-hidden shadow-md border-2 border-primary transition-all duration-300 ease-apple hover:-translate-y-1 hover:shadow-2xl group">
+    <article className="bg-[#D9D9D9] rounded-xl overflow-hidden shadow-md border-2 border-primary transition-all duration-300 ease-apple hover:-translate-y-1 hover:shadow-2xl group relative">
+      {(semEstoque || estoqueBaixo) && (
+        <span
+          className={`absolute top-2 left-2 z-10 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${
+            semEstoque ? "bg-red-600 text-white" : "bg-orange-500 text-white"
+          }`}
+        >
+          {semEstoque ? "Sem estoque" : "Estoque baixo"}
+        </span>
+      )}
       <div className="aspect-video bg-gray-300 overflow-hidden">
         {hasImage ? (
           <img
@@ -163,7 +187,11 @@ function ToolCard({ tool }: { tool: Tool }) {
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl">🔧</div>
+          <div className="w-full h-full flex items-center justify-center">
+            <svg className="w-14 h-14 text-gray-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63" />
+            </svg>
+          </div>
         )}
       </div>
       <div className="p-4 space-y-2">
@@ -183,9 +211,18 @@ function ToolCard({ tool }: { tool: Tool }) {
             {semEstoque ? "Sem estoque" : `${tool.quantity} em estoque`}
           </span>
           {tool.levelSecurity && (
-            <span className="text-xs text-gray-600 italic">Nível: {tool.levelSecurity}</span>
+            <span
+              className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${levelSecurityColor(tool.levelSecurity)}`}
+            >
+              Nível {levelSecurityLabel(tool.levelSecurity)}
+            </span>
           )}
         </div>
+        {tool.minQuantity > 0 && (
+          <p className="text-[11px] text-gray-500">
+            Mínimo de estoque: {tool.minQuantity}
+          </p>
+        )}
       </div>
     </article>
   );
