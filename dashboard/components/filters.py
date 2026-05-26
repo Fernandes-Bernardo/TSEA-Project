@@ -78,7 +78,6 @@ def filters_bar(sectors: list[str]) -> html.Section:
                         className="btn-export",
                         n_clicks=0,
                     ),
-                    dcc.Download(id="pdf-download"),
                 ],
             ),
         ],

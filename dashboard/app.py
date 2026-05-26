@@ -46,6 +46,7 @@ app.layout = html.Div(
     children=[
         dcc.Store(id="store-auth", storage_type="session"),
         dcc.Store(id="store-theme", storage_type="local", data="dark"),
+        dcc.Download(id="pdf-download"),
         html.Div(id="page-content"),
     ],
 )
@@ -355,18 +356,27 @@ def _is_nat(v) -> bool:
 def export_pdf(n_clicks, start, end, sector, status, ttype):
     if not n_clicks:
         return no_update
+    logging.info("export_pdf disparado (clicks=%s)", n_clicks)
     f = _filters_from_inputs(start, end, sector, status, ttype)
 
     buffer = io.BytesIO()
     try:
         build_pdf(buffer, filters=f)
-    except Exception as ex:
+    except Exception:
         logging.exception("erro gerando PDF")
-        raise dash.exceptions.PreventUpdate from ex
-    buffer.seek(0)
+        return no_update
 
+    pdf_bytes = buffer.getvalue()
+    logging.info("PDF pronto: %d bytes", len(pdf_bytes))
+
+    import base64
     fname = f"zaiko-relatorio-{datetime.now().strftime('%Y%m%d-%H%M')}.pdf"
-    return dcc.send_bytes(buffer.getvalue(), filename=fname)
+    return {
+        "content": base64.b64encode(pdf_bytes).decode("ascii"),
+        "filename": fname,
+        "type": "application/pdf",
+        "base64": True,
+    }
 
 
 if __name__ == "__main__":
