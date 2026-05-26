@@ -8,8 +8,7 @@
   --transition-base: 280ms var(--ease-apple);
 }
 
-
-body[data-theme="dark"] {
+.theme-dark {
   --bg: #15191F;
   --surface: #1D2330;
   --surface-alt: #252D3D;
@@ -23,8 +22,7 @@ body[data-theme="dark"] {
   --danger: #F87171;
 }
 
-
-body[data-theme="light"] {
+.theme-light {
   --bg: #BEBEBE;
   --surface: #D9D9D9;
   --surface-alt: #E9E9E9;
@@ -43,16 +41,19 @@ body[data-theme="light"] {
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  transition: background var(--transition-base), color var(--transition-base);
   min-height: 100vh;
 }
 
 #react-entry-point { min-height: 100vh; }
 
+#app-root {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background var(--transition-base), color var(--transition-base);
+}
 
 .login-shell {
   min-height: 100vh;
@@ -75,7 +76,7 @@ html, body {
 .login-brand { display: flex; flex-direction: column; margin-bottom: 28px; }
 .login-brand-name { color: var(--highlight); font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
 .login-brand-sub { color: var(--text-muted); font-size: 13px; }
-.login-title { font-size: 20px; margin: 0 0 6px 0; font-weight: 700; }
+.login-title { font-size: 20px; margin: 0 0 6px 0; font-weight: 700; color: var(--text); }
 .login-subtitle { color: var(--text-muted); font-size: 13px; margin: 0 0 24px 0; }
 .login-form { display: flex; flex-direction: column; gap: 8px; }
 .login-form label { font-size: 12px; color: var(--text-muted); margin-top: 8px; font-weight: 600; }
@@ -138,7 +139,7 @@ html, body {
   padding: 7px 14px;
   font-size: 12px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast), transform var(--transition-fast);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -152,6 +153,7 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 3px;
+  gap: 0;
 }
 .theme-toggle button {
   background: transparent;
@@ -170,7 +172,6 @@ html, body {
 }
 
 .main { padding: 24px 28px 40px 28px; flex: 1; animation: fadeIn 240ms var(--ease-apple); }
-
 
 .filters-bar {
   background: var(--surface);
@@ -207,7 +208,6 @@ html, body {
 .btn-export:active { transform: scale(0.97); }
 .btn-export:disabled { opacity: 0.6; cursor: wait; }
 
-
 .filter-field .Select-control,
 .filter-field .Select-menu-outer,
 .filter-field .Select--single > .Select-control .Select-value,
@@ -226,7 +226,6 @@ html, body {
 .filter-field .Select-value-label { color: var(--text) !important; }
 .filter-field .Select-arrow { border-color: var(--text-muted) transparent transparent !important; }
 .filter-field .VirtualizedSelectFocusedOption { background: var(--border) !important; color: var(--text) !important; }
-
 
 .kpi-row {
   display: grid;
@@ -266,7 +265,6 @@ html, body {
 .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
 .kpi-hint { font-size: 11px; color: var(--text-muted); }
 
-
 .charts-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -296,7 +294,6 @@ html, body {
   margin: 0 0 10px 0;
 }
 
-
 .table-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -316,7 +313,6 @@ html, body {
   color: var(--text) !important;
 }
 
-
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -328,7 +324,6 @@ html, body {
     transition-duration: 0.01ms !important;
   }
 }
-
 
 @media (max-width: 1280px) {
   .kpi-row { grid-template-columns: repeat(3, 1fr); }

@@ -1,9 +1,3 @@
-"""
-Zaiko — Dashboard analítica
-============================
-Entry point. Inicializa o Dash app, define o layout base com tema dual,
-registra todos os callbacks (login, filtros, KPIs, gráficos, export PDF).
-"""
 from __future__ import annotations
 
 import io
@@ -13,7 +7,6 @@ from typing import Optional
 
 import dash
 from dash import Input, Output, State, dcc, html, dash_table, no_update, ctx
-import plotly.graph_objects as go
 
 from config import DASH_PORT, DASH_SECRET_KEY, get_theme
 from services import api_auth, queries
@@ -47,34 +40,24 @@ server = app.server
 server.secret_key = DASH_SECRET_KEY
 
 
-# ---------- Layout-raiz -------------------------------------------------------
-
 app.layout = html.Div(
-    id="root",
+    id="app-root",
+    className="theme-dark",
     children=[
         dcc.Store(id="store-auth", storage_type="session"),
         dcc.Store(id="store-theme", storage_type="local", data="dark"),
-        html.Div(id="theme-applier"),  # patch que aplica data-theme no body
         html.Div(id="page-content"),
     ],
 )
 
 
-# ---------- Theme: aplica data-theme no <body> --------------------------------
-
-app.clientside_callback(
-    """
-    function(theme) {
-        document.body.setAttribute('data-theme', theme || 'dark');
-        return '';
-    }
-    """,
-    Output("theme-applier", "children"),
+@app.callback(
+    Output("app-root", "className"),
     Input("store-theme", "data"),
 )
+def apply_theme_class(theme):
+    return f"theme-{(theme or 'dark').lower()}"
 
-
-# ---------- Roteamento simples (login ↔ dashboard) ----------------------------
 
 @app.callback(
     Output("page-content", "children"),
@@ -85,8 +68,6 @@ def render_page(auth):
         return login_view.layout()
     return dashboard_layout(auth)
 
-
-# ---------- Login -------------------------------------------------------------
 
 @app.callback(
     Output("store-auth", "data"),
@@ -103,7 +84,7 @@ def do_login(_n_clicks, _s1, _s2, employee_id, password):
         return no_update, "Preencha crachá e senha."
     try:
         result = api_auth.login(int(employee_id), password)
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:
         logging.exception("login error")
         return no_update, f"Erro inesperado: {ex}"
     if not result.success:
@@ -125,10 +106,10 @@ def do_logout(n):
     return None
 
 
-# ---------- Toggle de tema ----------------------------------------------------
-
 @app.callback(
     Output("store-theme", "data"),
+    Output("btn-theme-dark", "className"),
+    Output("btn-theme-light", "className"),
     Input("btn-theme-dark", "n_clicks"),
     Input("btn-theme-light", "n_clicks"),
     State("store-theme", "data"),
@@ -137,13 +118,13 @@ def do_logout(n):
 def switch_theme(_d, _l, current):
     trigger = ctx.triggered_id
     if trigger == "btn-theme-dark":
-        return "dark"
-    if trigger == "btn-theme-light":
-        return "light"
-    return current
+        new = "dark"
+    elif trigger == "btn-theme-light":
+        new = "light"
+    else:
+        new = current or "dark"
+    return new, "active" if new == "dark" else "", "active" if new == "light" else ""
 
-
-# ---------- Layout principal --------------------------------------------------
 
 def dashboard_layout(auth: dict) -> html.Div:
     sectors = queries.list_sectors()
@@ -166,7 +147,7 @@ def dashboard_layout(auth: dict) -> html.Div:
                             html.Div(
                                 className="theme-toggle",
                                 children=[
-                                    html.Button("Escuro", id="btn-theme-dark", n_clicks=0),
+                                    html.Button("Escuro", id="btn-theme-dark", className="active", n_clicks=0),
                                     html.Button("Claro", id="btn-theme-light", n_clicks=0),
                                 ],
                             ),
@@ -254,8 +235,6 @@ def dashboard_layout(auth: dict) -> html.Div:
     )
 
 
-# ---------- Helpers de filtro -------------------------------------------------
-
 def _to_date(s: Optional[str]) -> Optional[date]:
     if not s:
         return None
@@ -277,8 +256,6 @@ def _filters_from_inputs(start, end, sector, status, ttype) -> Filters:
         tool_type=ttype,
     )
 
-
-# ---------- Atualização reativa de KPIs/gráficos/tabela ----------------------
 
 @app.callback(
     Output("kpis-section", "children"),
@@ -362,11 +339,8 @@ def refresh(start, end, sector, status, ttype, theme_name):
 
 
 def _is_nat(v) -> bool:
-    """Verifica NaT do pandas sem importar pandas aqui."""
-    return repr(v) == "NaT" or v != v  # noqa: PLR0124
+    return repr(v) == "NaT" or v != v
 
-
-# ---------- Export PDF --------------------------------------------------------
 
 @app.callback(
     Output("pdf-download", "data"),
@@ -376,24 +350,24 @@ def _is_nat(v) -> bool:
     State("flt-sector", "value"),
     State("flt-status", "value"),
     State("flt-type", "value"),
-    State("store-theme", "data"),
     prevent_initial_call=True,
 )
-def export_pdf(n_clicks, start, end, sector, status, ttype, theme_name):
+def export_pdf(n_clicks, start, end, sector, status, ttype):
     if not n_clicks:
         return no_update
-    theme = get_theme(theme_name or "dark")
     f = _filters_from_inputs(start, end, sector, status, ttype)
 
     buffer = io.BytesIO()
-    build_pdf(buffer, filters=f, theme=theme)
+    try:
+        build_pdf(buffer, filters=f)
+    except Exception as ex:
+        logging.exception("erro gerando PDF")
+        raise dash.exceptions.PreventUpdate from ex
     buffer.seek(0)
 
     fname = f"zaiko-relatorio-{datetime.now().strftime('%Y%m%d-%H%M')}.pdf"
     return dcc.send_bytes(buffer.getvalue(), filename=fname)
 
 
-# ---------- Bootstrap ---------------------------------------------------------
-
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=DASH_PORT)
+    app.run(debug=False, host="0.0.0.0", port=DASH_PORT)
