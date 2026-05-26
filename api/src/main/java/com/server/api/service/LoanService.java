@@ -28,13 +28,16 @@ public class LoanService {
     private final LoanRepository loanRepository;
     private final ToolsRepository toolsRepository;
     private final UserRepository userRepository;
+    private final MqttPublisherService mqttPublisher;
 
     public LoanService(LoanRepository loanRepository,
                        ToolsRepository toolsRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       MqttPublisherService mqttPublisher) {
         this.loanRepository = loanRepository;
         this.toolsRepository = toolsRepository;
         this.userRepository = userRepository;
+        this.mqttPublisher = mqttPublisher;
     }
 
     /**
@@ -129,7 +132,15 @@ public class LoanService {
             loan.setStatus(LoanStatus.DELIVERED);
         }
 
-        return loanRepository.save(loan);
+        Loan saved = loanRepository.save(loan);
+        triggerHardwarePulses(saved);
+        return saved;
+    }
+
+    private void triggerHardwarePulses(Loan loan) {
+        for (LoanItem item : loan.getItems()) {
+            mqttPublisher.pulseServoForTool(item.getToolName());
+        }
     }
 
     /**
