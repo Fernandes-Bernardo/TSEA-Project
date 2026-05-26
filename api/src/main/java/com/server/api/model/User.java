@@ -1,7 +1,6 @@
 package com.server.api.model;
 
 import java.io.Serializable;
-import java.util.Random;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 import jakarta.persistence.Column;
@@ -16,7 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "users")  
+@Table(name = "users")
 @Getter @Setter @NoArgsConstructor
 public class User implements Serializable{
     @Id
@@ -40,13 +39,11 @@ public class User implements Serializable{
     @Column(name = "password", nullable = false)
     private String password;
 
-    // Builders
-    public User(String name, Role role, String sector, String password) {
+    public User(String name, Integer employeeId, Role role, String sector, String password) {
         this.name = name;
-        this.employeeId = /*(int) (Math.random() * 100000)*/ new Random().nextInt(1_000_000); // TEST
+        this.employeeId = employeeId;
         this.role = role;
         this.sector = sector;
         this.password = password;
     }
-
 }

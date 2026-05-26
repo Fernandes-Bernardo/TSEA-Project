@@ -25,8 +25,12 @@ public class BootstrapAdmin {
         return args -> {
             boolean adminExists = repo.findAll().stream().anyMatch(u -> u.getRole() == Role.ROLE_ADMIN);
             if (!adminExists) {
-                var admin = new User("Administrador", Role.ROLE_ADMIN, "TI", encoder.encode(adminPassword));
-                admin.setEmployeeId(1);
+                var admin = new User(
+                        "Administrador",
+                        1,
+                        Role.ROLE_ADMIN,
+                        "TI",
+                        encoder.encode(adminPassword));
                 repo.save(admin);
                 log.info("Admin padrão criado: employeeId=1. Use a variável de ambiente ADMIN_PASSWORD para definir a senha.");
             }
