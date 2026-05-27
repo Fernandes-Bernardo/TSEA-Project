@@ -5,80 +5,84 @@ interface Props {
   actions?: React.ReactNode;
 }
 
-/**
- * Card compartilhado de exibição de empréstimo usado pelas páginas
- * do almoxarife (pendentes, ativos, histórico).
- */
 function LoanRow({ loan, actions }: Props) {
   const fmt = (s: string | null) => (s ? new Date(s).toLocaleString("pt-BR") : "-");
   const apenasConsumiveis = isConsumableOnly(loan);
 
   return (
-    <article className="bg-[#D9D9D9] rounded-xl border-2 border-primary p-4 shadow-md transition-all duration-300 ease-apple hover:shadow-lg animate-slide-up">
-      <header className="flex items-start justify-between gap-3 flex-wrap mb-3">
-        <div>
-          <h3 className="font-bold text-primary text-lg">
-            {loan.responsibleName}{" "}
-            <span className="text-sm font-normal text-gray-600">
-              (Crachá {loan.employeeId})
-            </span>
-          </h3>
-          <p className="text-xs text-gray-600">Solicitado em {fmt(loan.requestedAt)}</p>
-        </div>
-        <span className={`text-xs font-bold px-3 py-1 rounded-full ${statusColor(loan.status)}`}>
-          {statusLabel(loan.status)}
-        </span>
-      </header>
+    <div className="px-5 py-4 flex flex-col md:flex-row md:items-start md:justify-between gap-4 transition-colors duration-200 hover:bg-black/5">
+      <div className="flex-1 min-w-0">
+        <h3 className="font-bold text-primary text-lg leading-tight">
+          <span className="text-highlight">&gt;</span> {loan.responsibleName}
+        </h3>
 
-      <ul className="text-sm text-gray-800 space-y-1 mb-2">
-        {loan.items.map((item) => {
-          const pendente = item.quantity - item.returnedQuantity;
-          return (
-            <li key={item.id} className="flex items-center justify-between">
-              <span>
-                <span className="font-semibold">{item.quantity}×</span> {item.toolName}{" "}
+        <p className="text-sm text-gray-800 font-semibold mt-1">
+          <Star /> Solicitado em <span className="font-bold">{fmt(loan.requestedAt)}</span>
+        </p>
+        <p className="text-sm text-gray-800 font-semibold">
+          <Star /> Crachá: <span className="font-bold">{loan.employeeId}</span>
+        </p>
+        {loan.deliveredAt && (
+          <p className="text-sm text-gray-800 font-semibold">
+            <Star /> Entregue em <span className="font-bold">{fmt(loan.deliveredAt)}</span>
+          </p>
+        )}
+        {loan.returnedAt && (
+          <p className="text-sm text-gray-800 font-semibold">
+            <Star /> Concluído em <span className="font-bold">{fmt(loan.returnedAt)}</span>
+          </p>
+        )}
+
+        <ul className="text-sm text-gray-800 space-y-0.5 mt-2">
+          {loan.items.map((item) => {
+            const pendente = item.quantity - item.returnedQuantity;
+            return (
+              <li key={item.id} className="flex items-center gap-2">
+                <span className="font-semibold">{item.quantity}x {item.toolName}</span>
                 <span className="text-xs text-gray-500">
                   ({item.toolType === "CONSUMABLE" ? "Consumível" : "Ferramenta"})
                 </span>
-              </span>
-              {loan.status === "DELIVERED" && item.toolType !== "CONSUMABLE" && (
-                <span className="text-xs text-gray-600">
-                  {pendente > 0 ? `${pendente} pendente(s)` : "Devolvido"}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                {loan.status === "DELIVERED" && item.toolType !== "CONSUMABLE" && (
+                  <span className="text-xs text-gray-600 ml-auto">
+                    {pendente > 0 ? `${pendente} pendente(s)` : "Devolvido"}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
 
-      {(loan.deliveredAt || loan.returnedAt) && (
-        <div className="text-xs text-gray-600 space-y-0.5">
-          {loan.deliveredAt && <p>Entregue em {fmt(loan.deliveredAt)}</p>}
-          {loan.returnedAt && <p>Concluído em {fmt(loan.returnedAt)}</p>}
-        </div>
-      )}
+        {apenasConsumiveis && loan.status === "DELIVERED" && (
+          <p className="text-xs italic text-gray-600 mt-2">
+            Empréstimo apenas com consumíveis — não exige devolução.
+          </p>
+        )}
+      </div>
 
-      {apenasConsumiveis && loan.status === "DELIVERED" && (
-        <p className="text-xs italic text-gray-600 mt-1">
-          Empréstimo apenas com consumíveis — não exige devolução.
-        </p>
-      )}
-
-      {actions && <div className="mt-3 flex justify-end gap-2 flex-wrap">{actions}</div>}
-    </article>
+      <div className="flex flex-col items-end gap-3 min-w-[180px]">
+        <span className={`text-sm font-bold ${statusColor(loan.status)}`}>
+          {statusLabel(loan.status)}
+        </span>
+        {actions && <div className="flex flex-col gap-2 w-full items-end">{actions}</div>}
+      </div>
+    </div>
   );
+}
+
+function Star() {
+  return <span className="text-highlight font-bold mr-1">*</span>;
 }
 
 function statusColor(status: Loan["status"]): string {
   switch (status) {
     case "REQUESTED":
-      return "bg-orange-100 text-orange-700";
+      return "text-highlight";
     case "DELIVERED":
-      return "bg-blue-100 text-blue-700";
+      return "text-blue-700";
     case "RETURNED":
-      return "bg-green-100 text-green-700";
+      return "text-green-700";
     case "CANCELLED":
-      return "bg-gray-200 text-gray-600";
+      return "text-gray-500";
   }
 }
 
