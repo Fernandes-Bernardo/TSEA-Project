@@ -4,6 +4,7 @@ import Skeleton from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
 import ConfirmModal from "../ui/ConfirmModal";
 import LoanRow from "./LoanRow";
+import LoanListCard from "./LoanListCard";
 
 function EmprestimosAtivos() {
   const { toast } = useToast();
@@ -58,20 +59,13 @@ function EmprestimosAtivos() {
   return (
     <div className="min-h-screen p-6 animate-fade-in" style={{ backgroundColor: "#BEBEBE" }}>
       <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
-        <header>
-          <h1 className="text-2xl font-bold text-primary tracking-tight">Empréstimos ativos</h1>
-          <p className="text-gray-700 text-sm">
-            Itens entregues aguardando devolução. Empréstimos só com consumíveis são fechados automaticamente.
-          </p>
-        </header>
-
         <div className="flex items-center gap-2 bg-[#D9D9D9] rounded-full p-2 px-4 shadow-md focus-within:shadow-lg transition-shadow">
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
             type="text"
-            placeholder="Buscar por nome, crachá ou item..."
+            placeholder="Filtrar..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="flex-1 p-1 rounded-full bg-transparent focus:outline-none"
@@ -79,17 +73,19 @@ function EmprestimosAtivos() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
+          <LoanListCard>
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-32 w-full rounded-xl" />
+              <div key={i} className="px-5 py-4">
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
             ))}
-          </div>
+          </LoanListCard>
         ) : filtrados.length === 0 ? (
           <div className="bg-[#D9D9D9] rounded-xl border-2 border-dashed border-primary/40 p-12 text-center animate-fade-in">
             <p className="text-gray-600">Nenhum empréstimo ativo no momento.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <LoanListCard>
             {filtrados.map((loan) => {
               const apenasConsumiveis = isConsumableOnly(loan);
               return (
@@ -100,7 +96,7 @@ function EmprestimosAtivos() {
                     apenasConsumiveis ? null : (
                       <button
                         onClick={() => setPendingReturn(loan)}
-                        className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-[#1A3A3F] transition-all duration-200 ease-apple active:scale-95 text-sm font-medium shadow-sm"
+                        className="bg-highlight text-white px-4 py-2 rounded-md hover:bg-[#A06630] transition-all duration-200 ease-apple active:scale-95 text-sm font-bold shadow-sm whitespace-nowrap"
                       >
                         Confirmar devolução
                       </button>
@@ -109,7 +105,7 @@ function EmprestimosAtivos() {
                 />
               );
             })}
-          </div>
+          </LoanListCard>
         )}
       </div>
 

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { loansApi, statusLabel, type Loan, type LoanStatus } from "../../services/loans";
+import { loansApi, type Loan } from "../../services/loans";
 import Skeleton from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
 import ConfirmModal from "../ui/ConfirmModal";
+import LoanRow from "../Almoxarife/LoanRow";
+import LoanListCard from "../Almoxarife/LoanListCard";
 
 type FiltroTab = "ativos" | "concluidos" | "todos";
 
@@ -55,11 +57,6 @@ function MeusEmprestimos() {
   return (
     <div className="min-h-screen p-6 animate-fade-in" style={{ backgroundColor: "#BEBEBE" }}>
       <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
-        <header>
-          <h1 className="text-2xl font-bold text-primary tracking-tight">Meus empréstimos</h1>
-          <p className="text-gray-700 text-sm">Acompanhe suas solicitações em andamento e o histórico.</p>
-        </header>
-
         <div className="bg-[#D9D9D9] rounded-full p-1 shadow-md flex w-fit">
           {(["ativos", "concluidos", "todos"] as FiltroTab[]).map((f) => (
             <button
@@ -75,21 +72,34 @@ function MeusEmprestimos() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
+          <LoanListCard>
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-xl" />
+              <div key={i} className="px-5 py-4">
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
             ))}
-          </div>
+          </LoanListCard>
         ) : filtrados.length === 0 ? (
           <EmptyState filtro={filtro} />
         ) : (
-          <div className="space-y-4">
-            {filtrados.map((loan, idx) => (
-              <div key={loan.id} style={{ animationDelay: `${idx * 50}ms` }} className="animate-slide-up">
-                <LoanCard loan={loan} onCancel={() => setPendingCancel(loan)} />
-              </div>
+          <LoanListCard>
+            {filtrados.map((loan) => (
+              <LoanRow
+                key={loan.id}
+                loan={loan}
+                actions={
+                  loan.status === "REQUESTED" ? (
+                    <button
+                      onClick={() => setPendingCancel(loan)}
+                      className="bg-highlight text-white px-4 py-2 rounded-md hover:bg-[#A06630] transition-all duration-200 ease-apple active:scale-95 text-sm font-bold shadow-sm whitespace-nowrap"
+                    >
+                      Cancelar pedido
+                    </button>
+                  ) : null
+                }
+              />
             ))}
-          </div>
+          </LoanListCard>
         )}
       </div>
 
@@ -108,78 +118,6 @@ function MeusEmprestimos() {
       />
     </div>
   );
-}
-
-function LoanCard({ loan, onCancel }: { loan: Loan; onCancel: () => void }) {
-  const fmt = (s: string | null) => (s ? new Date(s).toLocaleString("pt-BR") : "-");
-  const cor = statusColor(loan.status);
-
-  return (
-    <article className="bg-[#D9D9D9] rounded-xl border-2 border-primary p-4 shadow-md transition-all duration-300 ease-apple hover:shadow-lg">
-      <header className="flex items-center justify-between gap-3 flex-wrap mb-3">
-        <div>
-          <h3 className="font-bold text-primary text-lg">
-            Pedido #{loan.id.slice(0, 8)}
-          </h3>
-          <p className="text-xs text-gray-600">
-            Solicitado em {fmt(loan.requestedAt)}
-          </p>
-        </div>
-        <span className={`text-xs font-bold px-3 py-1 rounded-full ${cor}`}>
-          {statusLabel(loan.status)}
-        </span>
-      </header>
-
-      <ul className="text-sm text-gray-800 space-y-1 mb-2">
-        {loan.items.map((item) => (
-          <li key={item.id} className="flex items-center justify-between">
-            <span>
-              <span className="font-semibold">{item.quantity}×</span> {item.toolName}{" "}
-              <span className="text-xs text-gray-500">
-                ({item.toolType === "CONSUMABLE" ? "Consumível" : "Ferramenta"})
-              </span>
-            </span>
-            {loan.status === "DELIVERED" && item.toolType !== "CONSUMABLE" && (
-              <span className="text-xs text-gray-600">
-                {item.returnedQuantity}/{item.quantity} devolvido(s)
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {(loan.deliveredAt || loan.returnedAt) && (
-        <div className="text-xs text-gray-600 mt-2 space-y-0.5">
-          {loan.deliveredAt && <p>Entregue em {fmt(loan.deliveredAt)}</p>}
-          {loan.returnedAt && <p>Concluído em {fmt(loan.returnedAt)}</p>}
-        </div>
-      )}
-
-      {loan.status === "REQUESTED" && (
-        <div className="mt-3 flex justify-end">
-          <button
-            onClick={onCancel}
-            className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors active:scale-95"
-          >
-            Cancelar solicitação
-          </button>
-        </div>
-      )}
-    </article>
-  );
-}
-
-function statusColor(status: LoanStatus): string {
-  switch (status) {
-    case "REQUESTED":
-      return "bg-orange-100 text-orange-700";
-    case "DELIVERED":
-      return "bg-blue-100 text-blue-700";
-    case "RETURNED":
-      return "bg-green-100 text-green-700";
-    case "CANCELLED":
-      return "bg-gray-200 text-gray-600";
-  }
 }
 
 function EmptyState({ filtro }: { filtro: FiltroTab }) {

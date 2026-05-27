@@ -3,6 +3,7 @@ import { loansApi, type Loan, type LoanStatus } from "../../services/loans";
 import Skeleton from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
 import LoanRow from "./LoanRow";
+import LoanListCard from "./LoanListCard";
 
 type Filtro = "todos" | LoanStatus;
 
@@ -58,11 +59,6 @@ function HistoricoLoans() {
   return (
     <div className="min-h-screen p-6 animate-fade-in" style={{ backgroundColor: "#BEBEBE" }}>
       <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
-        <header>
-          <h1 className="text-2xl font-bold text-primary tracking-tight">Histórico</h1>
-          <p className="text-gray-700 text-sm">Todos os empréstimos registrados, em qualquer estado.</p>
-        </header>
-
         <div className="flex flex-col md:flex-row gap-3">
           <div className="flex items-center gap-2 bg-[#D9D9D9] rounded-full p-2 px-4 shadow-md focus-within:shadow-lg transition-shadow flex-1">
             <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,7 +66,7 @@ function HistoricoLoans() {
             </svg>
             <input
               type="text"
-              placeholder="Buscar por nome, crachá ou item..."
+              placeholder="Filtrar..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               className="flex-1 p-1 rounded-full bg-transparent focus:outline-none"
@@ -92,21 +88,23 @@ function HistoricoLoans() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
+          <LoanListCard>
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+              <div key={i} className="px-5 py-4">
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
             ))}
-          </div>
+          </LoanListCard>
         ) : filtrados.length === 0 ? (
           <div className="bg-[#D9D9D9] rounded-xl border-2 border-dashed border-primary/40 p-12 text-center animate-fade-in">
             <p className="text-gray-600">Nenhum registro para o filtro atual.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <LoanListCard>
             {filtrados.map((loan) => (
               <LoanRow key={loan.id} loan={loan} />
             ))}
-          </div>
+          </LoanListCard>
         )}
       </div>
     </div>
