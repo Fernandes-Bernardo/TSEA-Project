@@ -73,11 +73,6 @@ function CatalogoAdmin() {
   return (
     <div className="min-h-screen p-6 animate-fade-in" style={{ backgroundColor: "#BEBEBE" }}>
       <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto">
-        <header className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-primary tracking-tight">Catálogo de materiais</h1>
-          <p className="text-gray-700 text-sm">Visão geral do inventário disponível.</p>
-        </header>
-
         <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <StatCard label="Itens cadastrados" value={totais.total} />
           <StatCard label="Ferramentas" value={totais.ferramentas} />
