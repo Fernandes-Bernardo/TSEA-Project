@@ -2,8 +2,8 @@
 #include <ESP32Servo.h>
 #include <PubSubClient.h>
 
-const char* WIFI_SSID = "net";
-const char* WIFI_PASSWORD = "1234";
+const char* WIFI_SSID = "ESP32-ZAIKO";
+const char* WIFI_PASSWORD = "z4iko4321";
 
 const char* MQTT_HOST = "broker.hivemq.com";
 const uint16_t MQTT_PORT = 1883;
