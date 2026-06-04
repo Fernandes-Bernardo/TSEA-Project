@@ -9,13 +9,22 @@ const char* MQTT_HOST = "broker.hivemq.com";
 const uint16_t MQTT_PORT = 1883;
 const char* MQTT_CLIENT_ID = "ZaikoESP32";
 
-const uint8_t SERVO_COUNT = 6;
-const int SERVO_PINS[SERVO_COUNT] = {18, 19, 21, 22, 23, 25};
-const int SERVO_REST_ANGLE = 0;
+const char* STATION_TOPIC_PREFIX = "zaiko/station/";
+
+const uint8_t SERVO_COUNT = 4;
+const int SERVO_PINS[SERVO_COUNT] = {18, 19, 21, 22};
+const int LED_PIN = 23;
+
+const int ACTIVE_ANGLE = 180;
+const int REST_ANGLE = 0;
+const unsigned long DEFAULT_PULSE_MS = 5000;
+
+const uint8_t STATION_COUNT = 2;
+const int STATION_SERVOS[STATION_COUNT][2] = {{0, 1}, {2, 3}};
 
 Servo servos[SERVO_COUNT];
-int currentAngle[SERVO_COUNT];
-unsigned long returnAtMs[SERVO_COUNT];
+unsigned long stationReturnAt[STATION_COUNT];
+unsigned long ledOffAt = 0;
 
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
@@ -28,12 +37,24 @@ void setupSerial() {
 
 
 void setupServos() {
+    ESP32PWM::allocateTimer(0);
+    ESP32PWM::allocateTimer(1);
+    ESP32PWM::allocateTimer(2);
+    ESP32PWM::allocateTimer(3);
     for (uint8_t i = 0; i < SERVO_COUNT; i++) {
         servos[i].setPeriodHertz(50);
         servos[i].attach(SERVO_PINS[i], 500, 2400);
-        moveServo(i, SERVO_REST_ANGLE);
-        returnAtMs[i] = 0;
+        servos[i].write(REST_ANGLE);
     }
+    for (uint8_t s = 0; s < STATION_COUNT; s++) {
+        stationReturnAt[s] = 0;
+    }
+}
+
+
+void setupLed() {
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
 }
 
 
@@ -41,7 +62,6 @@ void moveServo(uint8_t index, int angle) {
     if (index >= SERVO_COUNT) return;
     angle = constrain(angle, 0, 180);
     servos[index].write(angle);
-    currentAngle[index] = angle;
     Serial.print("[servo ");
     Serial.print(index + 1);
     Serial.print("] -> ");
@@ -49,19 +69,45 @@ void moveServo(uint8_t index, int angle) {
 }
 
 
-void pulseServo(uint8_t index, int angle, unsigned long durationMs) {
-    moveServo(index, angle);
-    returnAtMs[index] = millis() + durationMs;
+void setLed(bool on) {
+    digitalWrite(LED_PIN, on ? HIGH : LOW);
+    Serial.print("[led] -> ");
+    Serial.println(on ? "ON" : "OFF");
 }
 
 
-void tickServos() {
+void triggerStation(uint8_t station, unsigned long durationMs) {
+    if (station >= STATION_COUNT) return;
+    for (uint8_t k = 0; k < 2; k++) {
+        moveServo(STATION_SERVOS[station][k], ACTIVE_ANGLE);
+    }
+    stationReturnAt[station] = millis() + durationMs;
+
+    setLed(true);
+    unsigned long off = millis() + durationMs;
+    if (off > ledOffAt) ledOffAt = off;
+
+    Serial.print("[estacao ");
+    Serial.print(station + 1);
+    Serial.print("] acionada por ");
+    Serial.print(durationMs);
+    Serial.println(" ms");
+}
+
+
+void tick() {
     unsigned long now = millis();
-    for (uint8_t i = 0; i < SERVO_COUNT; i++) {
-        if (returnAtMs[i] != 0 && now >= returnAtMs[i]) {
-            moveServo(i, SERVO_REST_ANGLE);
-            returnAtMs[i] = 0;
+    for (uint8_t s = 0; s < STATION_COUNT; s++) {
+        if (stationReturnAt[s] != 0 && now >= stationReturnAt[s]) {
+            for (uint8_t k = 0; k < 2; k++) {
+                moveServo(STATION_SERVOS[s][k], REST_ANGLE);
+            }
+            stationReturnAt[s] = 0;
         }
+    }
+    if (ledOffAt != 0 && now >= ledOffAt) {
+        setLed(false);
+        ledOffAt = 0;
     }
 }
 
@@ -92,44 +138,21 @@ bool ensureWiFi() {
 }
 
 
-int parseServoFromTopic(const char* topic) {
-    if (strncmp(topic, "servo/", 6) != 0) return -1;
-    const char* p = topic + 6;
+int parseStationFromTopic(const char* topic) {
+    size_t prefixLen = strlen(STATION_TOPIC_PREFIX);
+    if (strncmp(topic, STATION_TOPIC_PREFIX, prefixLen) != 0) return -1;
+    const char* p = topic + prefixLen;
     int n = 0;
-    while (*p && *p != '/') {
+    bool hasDigit = false;
+    while (*p) {
         if (*p < '0' || *p > '9') return -1;
         n = n * 10 + (*p - '0');
+        hasDigit = true;
         p++;
     }
-    if (n < 1 || n > SERVO_COUNT) return -1;
+    if (!hasDigit) return -1;
+    if (n < 1 || n > STATION_COUNT) return -1;
     return n - 1;
-}
-
-
-bool topicEndsWith(const char* topic, const char* suffix) {
-    size_t tl = strlen(topic);
-    size_t sl = strlen(suffix);
-    if (sl > tl) return false;
-    return strcmp(topic + (tl - sl), suffix) == 0;
-}
-
-
-void handleSetMessage(uint8_t index, const String& payload) {
-    int angle = payload.toInt();
-    moveServo(index, angle);
-    if (angle != SERVO_REST_ANGLE) {
-        returnAtMs[index] = 0;
-    }
-}
-
-
-void handlePulseMessage(uint8_t index, const String& payload) {
-    int sep = payload.indexOf(':');
-    int angle = (sep > 0) ? payload.substring(0, sep).toInt() : payload.toInt();
-    long ms = (sep > 0) ? payload.substring(sep + 1).toInt() : 5000;
-    if (ms <= 0) ms = 5000;
-    if (ms > 60000) ms = 60000;
-    pulseServo(index, angle, (unsigned long) ms);
 }
 
 
@@ -139,23 +162,20 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     for (unsigned int i = 0; i < length; i++) {
         msg += (char) payload[i];
     }
-    int idx = parseServoFromTopic(topic);
-    if (idx < 0) return;
+    int station = parseStationFromTopic(topic);
+    if (station < 0) return;
 
-    if (topicEndsWith(topic, "/set")) {
-        handleSetMessage((uint8_t) idx, msg);
-    } else if (topicEndsWith(topic, "/pulse")) {
-        handlePulseMessage((uint8_t) idx, msg);
-    }
+    long ms = msg.toInt();
+    if (ms <= 0) ms = DEFAULT_PULSE_MS;
+    if (ms > 60000) ms = 60000;
+    triggerStation((uint8_t) station, (unsigned long) ms);
 }
 
 
-void subscribeAll() {
-    for (uint8_t i = 1; i <= SERVO_COUNT; i++) {
-        String setTopic = "servo/" + String(i) + "/set";
-        String pulseTopic = "servo/" + String(i) + "/pulse";
-        mqtt.subscribe(setTopic.c_str());
-        mqtt.subscribe(pulseTopic.c_str());
+void subscribeStations() {
+    for (uint8_t s = 1; s <= STATION_COUNT; s++) {
+        String topic = String(STATION_TOPIC_PREFIX) + String(s);
+        mqtt.subscribe(topic.c_str());
     }
 }
 
@@ -168,7 +188,7 @@ bool ensureMqtt() {
     Serial.println(clientId);
     if (mqtt.connect(clientId.c_str())) {
         Serial.println("MQTT conectado.");
-        subscribeAll();
+        subscribeStations();
         return true;
     }
     Serial.print("MQTT falhou, rc=");
@@ -187,6 +207,7 @@ void setupMqtt() {
 
 void setup() {
     setupSerial();
+    setupLed();
     setupServos();
     connectWiFi();
     setupMqtt();
@@ -204,5 +225,5 @@ void loop() {
     } else {
         mqtt.loop();
     }
-    tickServos();
+    tick();
 }
