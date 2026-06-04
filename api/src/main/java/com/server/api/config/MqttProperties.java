@@ -15,8 +15,9 @@ public class MqttProperties {
     private String clientId = "zaiko-api";
     private String username = "";
     private String password = "";
-    private int pulseAngle = 180;
     private long pulseDurationMs = 5000;
+    private String stationTopicPrefix = "zaiko/station/";
+    private int stationCount = 2;
     private String toolMapping = "";
 
     public Map<String, Integer> parsedMapping() {
@@ -28,9 +29,9 @@ public class MqttProperties {
             if (eq <= 0 || eq >= trimmed.length() - 1) continue;
             String name = trimmed.substring(0, eq).trim();
             try {
-                int servo = Integer.parseInt(trimmed.substring(eq + 1).trim());
-                if (servo >= 1 && servo <= 6) {
-                    map.put(name, servo);
+                int station = Integer.parseInt(trimmed.substring(eq + 1).trim());
+                if (station >= 1 && station <= stationCount) {
+                    map.put(name, station);
                 }
             } catch (NumberFormatException ignored) {
             }
@@ -48,10 +49,12 @@ public class MqttProperties {
     public void setUsername(String username) { this.username = username; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
-    public int getPulseAngle() { return pulseAngle; }
-    public void setPulseAngle(int pulseAngle) { this.pulseAngle = pulseAngle; }
     public long getPulseDurationMs() { return pulseDurationMs; }
     public void setPulseDurationMs(long pulseDurationMs) { this.pulseDurationMs = pulseDurationMs; }
+    public String getStationTopicPrefix() { return stationTopicPrefix; }
+    public void setStationTopicPrefix(String stationTopicPrefix) { this.stationTopicPrefix = stationTopicPrefix; }
+    public int getStationCount() { return stationCount; }
+    public void setStationCount(int stationCount) { this.stationCount = stationCount; }
     public String getToolMapping() { return toolMapping; }
     public void setToolMapping(String toolMapping) { this.toolMapping = toolMapping; }
 }

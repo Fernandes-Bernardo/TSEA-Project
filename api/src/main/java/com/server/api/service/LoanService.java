@@ -138,9 +138,10 @@ public class LoanService {
     }
 
     private void triggerHardwarePulses(Loan loan) {
-        for (LoanItem item : loan.getItems()) {
-            mqttPublisher.pulseServoForTool(item.getToolName());
-        }
+        var names = loan.getItems().stream()
+                .map(LoanItem::getToolName)
+                .toList();
+        mqttPublisher.triggerForToolNames(names);
     }
 
     /**

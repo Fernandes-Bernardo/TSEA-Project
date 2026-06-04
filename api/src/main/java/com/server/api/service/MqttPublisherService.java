@@ -1,10 +1,10 @@
 package com.server.api.service;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -27,12 +27,6 @@ public class MqttPublisherService {
     private static final Logger log = LoggerFactory.getLogger(MqttPublisherService.class);
 
     private final MqttProperties props;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "mqtt-servo-scheduler");
-        t.setDaemon(true);
-        return t;
-    });
-
     private IMqttClient client;
     private Map<String, Integer> mapping;
 
@@ -44,11 +38,12 @@ public class MqttPublisherService {
     public void start() {
         this.mapping = props.parsedMapping();
         if (!props.isEnabled()) {
-            log.info("MQTT desativado por configuração (app.mqtt.enabled=false).");
+            log.info("MQTT desativado por configuracao (app.mqtt.enabled=false).");
             return;
         }
         try {
-            client = new MqttClient(props.getBrokerUrl(), props.getClientId() + "-" + UUID.randomUUID().toString().substring(0, 6), new MemoryPersistence());
+            String id = props.getClientId() + "-" + UUID.randomUUID().toString().substring(0, 6);
+            client = new MqttClient(props.getBrokerUrl(), id, new MemoryPersistence());
             MqttConnectOptions opts = new MqttConnectOptions();
             opts.setAutomaticReconnect(true);
             opts.setCleanSession(true);
@@ -58,15 +53,14 @@ public class MqttPublisherService {
                 opts.setPassword(props.getPassword().toCharArray());
             }
             client.connect(opts);
-            log.info("MQTT conectado em {} ({} mapeamentos carregados)", props.getBrokerUrl(), mapping.size());
+            log.info("MQTT conectado em {} ({} produtos mapeados)", props.getBrokerUrl(), mapping.size());
         } catch (MqttException ex) {
-            log.warn("Falha ao conectar no broker MQTT ({}). Pulsos para o ESP serão ignorados.", ex.getMessage());
+            log.warn("Falha ao conectar no broker MQTT ({}). Acionamentos do hardware serao ignorados.", ex.getMessage());
         }
     }
 
     @PreDestroy
     public void shutdown() {
-        scheduler.shutdownNow();
         if (client != null && client.isConnected()) {
             try {
                 client.disconnect();
@@ -76,34 +70,35 @@ public class MqttPublisherService {
         }
     }
 
-    public Integer servoForTool(String toolName) {
+    public Integer stationForTool(String toolName) {
         if (toolName == null || mapping == null) return null;
         return mapping.get(toolName);
     }
 
-    public void pulseServoForTool(String toolName) {
-        Integer servo = servoForTool(toolName);
-        if (servo == null) return;
-        pulseServo(servo, props.getPulseAngle(), props.getPulseDurationMs());
+    public void triggerForToolNames(Collection<String> toolNames) {
+        if (toolNames == null) return;
+        Set<Integer> stations = new LinkedHashSet<>();
+        for (String name : toolNames) {
+            Integer station = stationForTool(name);
+            if (station != null) stations.add(station);
+        }
+        for (Integer station : stations) {
+            triggerStation(station);
+        }
     }
 
-    public void pulseServo(int servoNumber, int angle, long durationMs) {
+    public void triggerStation(int station) {
         if (!isConnected()) {
-            log.debug("MQTT não conectado. Ignorando pulso do servo {}.", servoNumber);
+            log.debug("MQTT nao conectado. Ignorando estacao {}.", station);
             return;
         }
-        publish(servoNumber, angle);
-        scheduler.schedule(() -> publish(servoNumber, 0), durationMs, TimeUnit.MILLISECONDS);
-    }
-
-    private void publish(int servoNumber, int angle) {
-        String topic = "servo/" + servoNumber + "/set";
-        MqttMessage msg = new MqttMessage(String.valueOf(angle).getBytes());
+        String topic = props.getStationTopicPrefix() + station;
+        MqttMessage msg = new MqttMessage(String.valueOf(props.getPulseDurationMs()).getBytes());
         msg.setQos(1);
         msg.setRetained(false);
         try {
             client.publish(topic, msg);
-            log.info("MQTT -> {} = {}", topic, angle);
+            log.info("MQTT -> {} ({} ms)", topic, props.getPulseDurationMs());
         } catch (MqttException ex) {
             log.warn("Falha ao publicar em {}: {}", topic, ex.getMessage());
         }
