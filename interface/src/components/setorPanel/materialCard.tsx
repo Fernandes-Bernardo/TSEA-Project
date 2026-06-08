@@ -21,7 +21,7 @@ function MaterialCard({ material, onAddToCart }: MaterialCardProps) {
   };
 
   return (
-    <div className="bg-[#D9D9D9] rounded-lg p-4 shadow-md border-2 border-primary flex items-center gap-4 w-full transition-all duration-300 ease-apple hover:shadow-xl hover:-translate-y-0.5">
+    <div className="px-5 py-4 flex items-center gap-4 w-full transition-colors duration-200 hover:bg-black/5">
       <div className="w-[151px] h-[119px] bg-gray-300 rounded-md flex-shrink-0 flex items-center justify-center overflow-hidden">
         {hasImage ? (
           <img

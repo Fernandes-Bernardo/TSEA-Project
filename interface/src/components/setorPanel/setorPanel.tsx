@@ -6,7 +6,7 @@ import { toolsApi, type Tool } from "../../services/tools";
 import { loansApi } from "../../services/loans";
 import { getCurrentUser } from "../../services/auth";
 import SuccessModal from "../ui/SuccessModal";
-import { MaterialCardSkeleton } from "../ui/Skeleton";
+import Skeleton from "../ui/Skeleton";
 import { useToast } from "../ui/Toast";
 
 function SetorPanel() {
@@ -158,23 +158,25 @@ function SetorPanel() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col gap-6">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <MaterialCardSkeleton key={i} />
-            ))}
+          <div className="bg-[#D9D9D9] rounded-2xl border-2 border-primary shadow-md overflow-hidden">
+            <div className="divide-y-2 divide-highlight">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="px-5 py-4">
+                  <Skeleton className="h-28 w-full rounded-lg" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : visiveis.length === 0 ? (
           <EmptyMateriais />
         ) : (
-          visiveis.map((material, idx) => (
-            <div
-              key={material.id}
-              style={{ animationDelay: `${idx * 60}ms` }}
-              className="animate-slide-up"
-            >
-              <MaterialCard material={material} onAddToCart={addToCart} />
+          <div className="bg-[#D9D9D9] rounded-2xl border-2 border-primary shadow-md overflow-hidden animate-slide-up">
+            <div className="divide-y-2 divide-highlight">
+              {visiveis.map((material) => (
+                <MaterialCard key={material.id} material={material} onAddToCart={addToCart} />
+              ))}
             </div>
-          ))
+          </div>
         )}
       </div>
 
