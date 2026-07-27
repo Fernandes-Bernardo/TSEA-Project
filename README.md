@@ -248,9 +248,10 @@ TSEA-Project/
    `scannedEmployeeId` corresponde ao `employeeId` do empréstimo.
 4. Estoque é decrementado, o status passa para `DELIVERED` (ou direto para
    `RETURNED` se o empréstimo for **só de consumíveis**).
-5. Para cada item mapeado no `app.mqtt.tool-mapping`, o backend publica
-   `servo/{n}/set 180` no broker MQTT, agenda o retorno a `0` após 5s e
-   o ESP32 movimenta o servomotor correspondente.
+5. Para cada item mapeado em `app.mqtt.tool-servos`, o backend publica
+   `<servo>:<ms>` em `zaiko/servos`. O ESP32 move **apenas o servo daquele
+   produto** para 180° e o devolve a 0° quando o prazo expira. Servos repetidos
+   na mesma entrega são deduplicados.
 
 ### Devolução (Almoxarife)
 
@@ -329,23 +330,29 @@ mapeamento dispara um pulso no servomotor correspondente.
 | `app.mqtt.enabled`           | `true`                            | Habilita o publisher MQTT            |
 | `app.mqtt.broker-url`        | `tcp://broker.hivemq.com:1883`    | URL do broker                        |
 | `app.mqtt.client-id`         | `zaiko-api`                       | Prefixo do client id                 |
-| `app.mqtt.pulse-angle`       | `180`                             | Ângulo do pulso                      |
 | `app.mqtt.pulse-duration-ms` | `5000`                            | Duração antes do retorno a `0`       |
-| `app.mqtt.tool-mapping`      | `Eletrodo 6013 2.5mm=1,…`         | Mapa `nomeDaFerramenta=servo(1..6)`  |
+| `app.mqtt.topic`             | `zaiko/servos`                    | Tópico único de acionamento          |
+| `app.mqtt.servo-count`       | `6`                               | Faixa válida do número do servo      |
+| `app.mqtt.tool-servos`       | `Eletrodo 6013 2.5mm=1,…`         | Mapa `nomeDaFerramenta=servo(1..6)`  |
 
 ### Tópicos MQTT
 
-| Tópico                  | Payload                | Efeito                                       |
-|-------------------------|------------------------|----------------------------------------------|
-| `servo/{n}/set`         | `<ângulo>` (0..180)    | Move o servo `n` para o ângulo imediatamente |
-| `servo/{n}/pulse`       | `<ângulo>:<ms>`        | Vai ao ângulo e volta a `0` após `ms`        |
+| Tópico          | Payload             | Efeito                                        |
+|-----------------|---------------------|-----------------------------------------------|
+| `zaiko/servos`  | `<servo>:<ms>`      | Move o servo `1..6` a 180° e volta a 0° após `ms` |
+
+O `:<ms>` é opcional e cai no padrão de 5000 ms; `ms` é limitado a 60000.
+Servo fora da faixa `1..6` é ignorado com log no serial. Cada servo tem prazo
+independente, e um comando novo para o mesmo servo **estende** o prazo, nunca
+o encurta.
+
+Mapa servo → pino: `1`→18, `2`→19, `3`→21, `4`→22, `5`→5, `6`→23.
 
 ### Firmware
 
-O firmware em `esp/main/main.ino` é modular (funções `setupServos`, `moveServo`,
-`pulseServo`, `tickServos`, `connectWiFi`, `ensureWiFi`, `mqttCallback`,
-`subscribeAll`, `ensureMqtt`, `setupMqtt`). O retorno do servo a `0` é controlado
-por `millis()` no loop principal — **não bloqueia** outras leituras MQTT.
+O firmware em `esp/main/main.ino` cobre WiFi, MQTT e os 6 servos (pinos 18, 19,
+21, 22, 5 e 23) mais 2 LEDs indicadores (27 e 26). O retorno dos servos a `0` é
+controlado por `millis()` no loop principal — **não bloqueia** a leitura MQTT.
 
 ---
 

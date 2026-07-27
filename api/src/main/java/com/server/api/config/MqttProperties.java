@@ -1,6 +1,6 @@
 package com.server.api.config;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -16,27 +16,30 @@ public class MqttProperties {
     private String username = "";
     private String password = "";
     private long pulseDurationMs = 5000;
-    private String stationTopicPrefix = "zaiko/station/";
-    private int stationCount = 2;
-    private String toolMapping = "";
+    private String topic = "zaiko/servos";
+    private int servoCount = 6;
+    private String toolServos = "";
 
-    public Map<String, Integer> parsedMapping() {
-        Map<String, Integer> map = new HashMap<>();
-        if (toolMapping == null || toolMapping.isBlank()) return map;
-        for (String pair : toolMapping.split(",")) {
-            String trimmed = pair.trim();
-            int eq = trimmed.lastIndexOf('=');
-            if (eq <= 0 || eq >= trimmed.length() - 1) continue;
-            String name = trimmed.substring(0, eq).trim();
+    /**
+     * Mapa nomeDaFerramenta=servo(1..servoCount). A comparacao e por nome exato
+     * contra Tools.name; par malformado ou fora da faixa e descartado.
+     */
+    public Map<String, Integer> parsedToolServos() {
+        Map<String, Integer> mapa = new LinkedHashMap<>();
+        if (toolServos == null || toolServos.isBlank()) return mapa;
+        for (String par : toolServos.split(",")) {
+            String t = par.trim();
+            int eq = t.lastIndexOf('=');
+            if (eq <= 0 || eq >= t.length() - 1) continue;
             try {
-                int station = Integer.parseInt(trimmed.substring(eq + 1).trim());
-                if (station >= 1 && station <= stationCount) {
-                    map.put(name, station);
+                int servo = Integer.parseInt(t.substring(eq + 1).trim());
+                if (servo >= 1 && servo <= servoCount) {
+                    mapa.put(t.substring(0, eq).trim(), servo);
                 }
             } catch (NumberFormatException ignored) {
             }
         }
-        return map;
+        return mapa;
     }
 
     public boolean isEnabled() { return enabled; }
@@ -51,10 +54,10 @@ public class MqttProperties {
     public void setPassword(String password) { this.password = password; }
     public long getPulseDurationMs() { return pulseDurationMs; }
     public void setPulseDurationMs(long pulseDurationMs) { this.pulseDurationMs = pulseDurationMs; }
-    public String getStationTopicPrefix() { return stationTopicPrefix; }
-    public void setStationTopicPrefix(String stationTopicPrefix) { this.stationTopicPrefix = stationTopicPrefix; }
-    public int getStationCount() { return stationCount; }
-    public void setStationCount(int stationCount) { this.stationCount = stationCount; }
-    public String getToolMapping() { return toolMapping; }
-    public void setToolMapping(String toolMapping) { this.toolMapping = toolMapping; }
+    public String getTopic() { return topic; }
+    public void setTopic(String topic) { this.topic = topic; }
+    public int getServoCount() { return servoCount; }
+    public void setServoCount(int servoCount) { this.servoCount = servoCount; }
+    public String getToolServos() { return toolServos; }
+    public void setToolServos(String toolServos) { this.toolServos = toolServos; }
 }

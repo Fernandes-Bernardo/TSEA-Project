@@ -2,28 +2,34 @@
 #include <ESP32Servo.h>
 #include <PubSubClient.h>
 
-const char* WIFI_SSID = "ESP32-ZAIKO";
-const char* WIFI_PASSWORD = "z4iko4321";
+const char* WIFI_SSID = "duda";
+const char* WIFI_PASSWORD = "tjal1244";
 
 const char* MQTT_HOST = "broker.hivemq.com";
 const uint16_t MQTT_PORT = 1883;
 const char* MQTT_CLIENT_ID = "ZaikoESP32";
 
-const char* STATION_TOPIC_PREFIX = "zaiko/station/";
+// Topico unico. O payload diz QUAL servo mover: "<servo>:<ms>", ex "3:5000".
+// O ":<ms>" e opcional e cai em DEFAULT_PULSE_MS quando ausente.
+const char* MQTT_TOPIC = "zaiko/servos";
 
-const uint8_t SERVO_COUNT = 4;
-const int SERVO_PINS[SERVO_COUNT] = {18, 19, 21, 22};
-const int LED_PIN = 23;
+// Servo 1..6 na ordem dos pinos abaixo.
+const uint8_t SERVO_COUNT = 6;
+const int SERVO_PINS[SERVO_COUNT] = {18, 19, 21, 22, 5, 23};
+
+const int PULSE_MIN_US = 500;
+const int PULSE_MAX_US = 2400;
 
 const int ACTIVE_ANGLE = 180;
 const int REST_ANGLE = 0;
 const unsigned long DEFAULT_PULSE_MS = 5000;
 
-const uint8_t STATION_COUNT = 2;
-const int STATION_SERVOS[STATION_COUNT][2] = {{0, 1}, {2, 3}};
+const uint8_t LED_COUNT = 2;
+const int LED_PINS[LED_COUNT] = {27, 26};
 
 Servo servos[SERVO_COUNT];
-unsigned long stationReturnAt[STATION_COUNT];
+// Prazo de retorno independente por servo: cada um volta no seu proprio tempo.
+unsigned long servoReturnAt[SERVO_COUNT];
 unsigned long ledOffAt = 0;
 
 WiFiClient espClient;
@@ -43,18 +49,19 @@ void setupServos() {
     ESP32PWM::allocateTimer(3);
     for (uint8_t i = 0; i < SERVO_COUNT; i++) {
         servos[i].setPeriodHertz(50);
-        servos[i].attach(SERVO_PINS[i], 500, 2400);
+        servos[i].attach(SERVO_PINS[i], PULSE_MIN_US, PULSE_MAX_US);
         servos[i].write(REST_ANGLE);
-    }
-    for (uint8_t s = 0; s < STATION_COUNT; s++) {
-        stationReturnAt[s] = 0;
+        servoReturnAt[i] = 0;
     }
 }
 
 
 void setupLed() {
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, LOW);
+    for (uint8_t i = 0; i < LED_COUNT; i++) {
+        pinMode(LED_PINS[i], OUTPUT);
+        digitalWrite(LED_PINS[i], LOW);
+    }
+    ledOffAt = 0;
 }
 
 
@@ -70,41 +77,41 @@ void moveServo(uint8_t index, int angle) {
 
 
 void setLed(bool on) {
-    digitalWrite(LED_PIN, on ? HIGH : LOW);
+    for (uint8_t i = 0; i < LED_COUNT; i++) {
+        digitalWrite(LED_PINS[i], on ? HIGH : LOW);
+    }
     Serial.print("[led] -> ");
     Serial.println(on ? "ON" : "OFF");
 }
 
 
-void triggerStation(uint8_t station, unsigned long durationMs) {
-    if (station >= STATION_COUNT) return;
-    for (uint8_t k = 0; k < 2; k++) {
-        moveServo(STATION_SERVOS[station][k], ACTIVE_ANGLE);
-    }
-    stationReturnAt[station] = millis() + durationMs;
+void triggerServo(uint8_t index, unsigned long durationMs) {
+    if (index >= SERVO_COUNT) return;
+    moveServo(index, ACTIVE_ANGLE);
 
-    setLed(true);
     unsigned long off = millis() + durationMs;
+    // Comando novo para o mesmo servo so estende o prazo, nunca encurta.
+    if (off > servoReturnAt[index]) servoReturnAt[index] = off;
     if (off > ledOffAt) ledOffAt = off;
+    setLed(true);
 
-    Serial.print("[estacao ");
-    Serial.print(station + 1);
-    Serial.print("] acionada por ");
+    Serial.print("[servo ");
+    Serial.print(index + 1);
+    Serial.print(" acionado por ");
     Serial.print(durationMs);
-    Serial.println(" ms");
+    Serial.println(" ms]");
 }
 
 
 void tick() {
     unsigned long now = millis();
-    for (uint8_t s = 0; s < STATION_COUNT; s++) {
-        if (stationReturnAt[s] != 0 && now >= stationReturnAt[s]) {
-            for (uint8_t k = 0; k < 2; k++) {
-                moveServo(STATION_SERVOS[s][k], REST_ANGLE);
-            }
-            stationReturnAt[s] = 0;
+    for (uint8_t i = 0; i < SERVO_COUNT; i++) {
+        if (servoReturnAt[i] != 0 && now >= servoReturnAt[i]) {
+            moveServo(i, REST_ANGLE);
+            servoReturnAt[i] = 0;
         }
     }
+    // LED apaga quando o ultimo servo ativo termina.
     if (ledOffAt != 0 && now >= ledOffAt) {
         setLed(false);
         ledOffAt = 0;
@@ -138,45 +145,39 @@ bool ensureWiFi() {
 }
 
 
-int parseStationFromTopic(const char* topic) {
-    size_t prefixLen = strlen(STATION_TOPIC_PREFIX);
-    if (strncmp(topic, STATION_TOPIC_PREFIX, prefixLen) != 0) return -1;
-    const char* p = topic + prefixLen;
-    int n = 0;
-    bool hasDigit = false;
-    while (*p) {
-        if (*p < '0' || *p > '9') return -1;
-        n = n * 10 + (*p - '0');
-        hasDigit = true;
-        p++;
-    }
-    if (!hasDigit) return -1;
-    if (n < 1 || n > STATION_COUNT) return -1;
-    return n - 1;
-}
-
-
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+    if (strcmp(topic, MQTT_TOPIC) != 0) return;
+
     String msg;
     msg.reserve(length);
     for (unsigned int i = 0; i < length; i++) {
         msg += (char) payload[i];
     }
-    int station = parseStationFromTopic(topic);
-    if (station < 0) return;
+    msg.trim();
 
-    long ms = msg.toInt();
+    // "<servo>:<ms>", com ":<ms>" opcional.
+    int sep = msg.indexOf(':');
+    long servo = (sep >= 0 ? msg.substring(0, sep) : msg).toInt();
+    long ms = (sep >= 0) ? msg.substring(sep + 1).toInt() : 0;
+
+    if (servo < 1 || servo > SERVO_COUNT) {
+        Serial.print("[ignorado] servo fora da faixa 1..");
+        Serial.print(SERVO_COUNT);
+        Serial.print(", payload: ");
+        Serial.println(msg);
+        return;
+    }
     if (ms <= 0) ms = DEFAULT_PULSE_MS;
     if (ms > 60000) ms = 60000;
-    triggerStation((uint8_t) station, (unsigned long) ms);
+
+    triggerServo((uint8_t) (servo - 1), (unsigned long) ms);
 }
 
 
-void subscribeStations() {
-    for (uint8_t s = 1; s <= STATION_COUNT; s++) {
-        String topic = String(STATION_TOPIC_PREFIX) + String(s);
-        mqtt.subscribe(topic.c_str());
-    }
+void subscribeTopic() {
+    mqtt.subscribe(MQTT_TOPIC);
+    Serial.print("Assinado em ");
+    Serial.println(MQTT_TOPIC);
 }
 
 
@@ -188,7 +189,7 @@ bool ensureMqtt() {
     Serial.println(clientId);
     if (mqtt.connect(clientId.c_str())) {
         Serial.println("MQTT conectado.");
-        subscribeStations();
+        subscribeTopic();
         return true;
     }
     Serial.print("MQTT falhou, rc=");

@@ -28,7 +28,7 @@ public class MqttPublisherService {
 
     private final MqttProperties props;
     private IMqttClient client;
-    private Map<String, Integer> mapping;
+    private Map<String, Integer> toolServos;
 
     public MqttPublisherService(MqttProperties props) {
         this.props = props;
@@ -36,7 +36,7 @@ public class MqttPublisherService {
 
     @PostConstruct
     public void start() {
-        this.mapping = props.parsedMapping();
+        this.toolServos = props.parsedToolServos();
         if (!props.isEnabled()) {
             log.info("MQTT desativado por configuracao (app.mqtt.enabled=false).");
             return;
@@ -53,7 +53,8 @@ public class MqttPublisherService {
                 opts.setPassword(props.getPassword().toCharArray());
             }
             client.connect(opts);
-            log.info("MQTT conectado em {} ({} produtos mapeados)", props.getBrokerUrl(), mapping.size());
+            log.info("MQTT conectado em {} ({} produtos mapeados para servos)",
+                    props.getBrokerUrl(), toolServos.size());
         } catch (MqttException ex) {
             log.warn("Falha ao conectar no broker MQTT ({}). Acionamentos do hardware serao ignorados.", ex.getMessage());
         }
@@ -70,35 +71,40 @@ public class MqttPublisherService {
         }
     }
 
-    public Integer stationForTool(String toolName) {
-        if (toolName == null || mapping == null) return null;
-        return mapping.get(toolName);
+    public Integer servoForTool(String toolName) {
+        if (toolName == null || toolServos == null) return null;
+        return toolServos.get(toolName);
     }
 
+    /**
+     * Aciona o servo de cada produto mapeado da entrega. Servos repetidos sao
+     * deduplicados, entao o mesmo produto duas vezes gera um acionamento so.
+     */
     public void triggerForToolNames(Collection<String> toolNames) {
         if (toolNames == null) return;
-        Set<Integer> stations = new LinkedHashSet<>();
+        Set<Integer> servos = new LinkedHashSet<>();
         for (String name : toolNames) {
-            Integer station = stationForTool(name);
-            if (station != null) stations.add(station);
+            Integer servo = servoForTool(name);
+            if (servo != null) servos.add(servo);
         }
-        for (Integer station : stations) {
-            triggerStation(station);
+        for (Integer servo : servos) {
+            triggerServo(servo);
         }
     }
 
-    public void triggerStation(int station) {
+    public void triggerServo(int servo) {
         if (!isConnected()) {
-            log.debug("MQTT nao conectado. Ignorando estacao {}.", station);
+            log.debug("MQTT nao conectado. Ignorando servo {}.", servo);
             return;
         }
-        String topic = props.getStationTopicPrefix() + station;
-        MqttMessage msg = new MqttMessage(String.valueOf(props.getPulseDurationMs()).getBytes());
+        String topic = props.getTopic();
+        String payload = servo + ":" + props.getPulseDurationMs();
+        MqttMessage msg = new MqttMessage(payload.getBytes());
         msg.setQos(1);
         msg.setRetained(false);
         try {
             client.publish(topic, msg);
-            log.info("MQTT -> {} ({} ms)", topic, props.getPulseDurationMs());
+            log.info("MQTT -> {} [{}]", topic, payload);
         } catch (MqttException ex) {
             log.warn("Falha ao publicar em {}: {}", topic, ex.getMessage());
         }

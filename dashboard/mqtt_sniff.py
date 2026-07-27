@@ -1,9 +1,8 @@
-import sys
 import paho.mqtt.client as mqtt
 
 BROKER = "broker.hivemq.com"
 PORT = 1883
-TOPIC = "servo/#"
+TOPIC = "zaiko/#"
 
 
 def on_connect(client, userdata, flags, rc):
